@@ -1,5 +1,6 @@
 import type { DamageApi, GameContext, System } from '../core/context'
 import { findById, isAlive } from '../core/lookup'
+import { mn } from '../i18n'
 
 const CORPSE_TIME = 3
 
@@ -76,7 +77,7 @@ export class DamageSystem implements System, DamageApi {
     if (c.postBuildingId !== null) this.ctx.sys.buildings.releaseTowerSlot(c)
     bus.emit('sfx', { name: 'hit' })
     if (c.owner === 'player') {
-      bus.emit('toast', { text: 'A citizen has fallen.', kind: 'danger' })
+      bus.emit('toast', { text: mn.citizenFell, kind: 'danger' })
     }
   }
 
@@ -116,7 +117,7 @@ export class DamageSystem implements System, DamageApi {
         delay: config.hero.invulnerableTime + 0.6,
       }
       bus.emit('bannerLost', { x: hero.x })
-      bus.emit('toast', { text: 'The banner has fallen!', kind: 'danger' })
+      bus.emit('toast', { text: mn.bannerFell, kind: 'danger' })
     }
     bus.emit('heroHit', { coinsLost: 0 })
   }

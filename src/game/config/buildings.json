@@ -1,6 +1,6 @@
 {
   "ger": {
-    "label": "Central Ger",
+    "label": "Төв гэр",
     "category": "palace",
     "cost": 0,
     "buildWork": 0,
@@ -11,7 +11,7 @@
     "archerCapacity": 0
   },
   "wall": {
-    "label": "Wooden Wall",
+    "label": "Модон хашаа",
     "category": "wall",
     "cost": 4,
     "buildWork": 6,
@@ -22,7 +22,7 @@
     "archerCapacity": 0
   },
   "tower": {
-    "label": "Archer Tower",
+    "label": "Харвах цамхаг",
     "category": "tower",
     "cost": 8,
     "buildWork": 10,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createConfig } from './config'
 import { GameManager } from './GameManager'
+import { mn } from './i18n'
 import { KeyboardInput } from './input/Input'
 import { loadAssets } from './render/assets'
 import { Renderer } from './render/Renderer'
@@ -34,7 +35,7 @@ const params = () =>
     : new URLSearchParams(window.location.search)
 
 const btn =
-  'cursor-pointer rounded-sm border-2 px-6 py-2.5 font-display text-base font-bold tracking-wider uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
+  'cursor-pointer rounded-sm border-2 px-6 py-2.5 font-display text-base font-bold tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
 const btnPrimary = `${btn} border-amber-300 bg-amber-400 text-stone-900 hover:bg-amber-300`
 const btnGhost = `${btn} border-amber-200/40 bg-stone-900/60 text-amber-100 hover:bg-stone-800/80`
 
@@ -218,7 +219,7 @@ export function GameShell() {
             className={`${btnGhost} px-3 py-1 text-xs`}
             onClick={toggleMute}
           >
-            Sound: {muted ? 'off' : 'on'}
+            {mn.sound(muted)}
           </button>
           <button
             className={`${btnGhost} px-3 py-1 text-xs`}
@@ -230,7 +231,7 @@ export function GameShell() {
               }
             }}
           >
-            Pause
+            {mn.pause.button}
           </button>
         </div>
       )}
@@ -243,30 +244,31 @@ export function GameShell() {
           <div className="absolute inset-0 bg-linear-to-t from-stone-950 via-stone-950/55 to-transparent" />
           <div className="relative flex h-full flex-col items-center justify-end p-6 pb-8 text-center">
             <p className="m-0 text-xs font-bold tracking-widest text-amber-300/90 uppercase">
-              Steppe survival · kingdom building
+              {mn.menu.kicker}
             </p>
             <h1 className="m-0 mt-2 font-display text-5xl font-bold text-amber-100 drop-shadow-lg sm:text-7xl">
-              Монгол хаант улс
+              {mn.title}
             </h1>
             <p className="mt-3 max-w-lg text-base text-amber-50/85">
-              Ride out from a single ger. Gather coins, recruit your people,
-              raise walls and towers, and hold the steppe through every night.
+              {mn.menu.blurb}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
               <button className={btnPrimary} onClick={() => start('new')}>
-                New Game
+                {mn.menu.newGame}
               </button>
               {hasSave && (
                 <button className={btnGhost} onClick={() => start('continue')}>
-                  Continue
+                  {mn.menu.continue}
                 </button>
               )}
             </div>
             <p className="mt-5 text-sm text-amber-100/70">
-              <b className="text-amber-200">A D / ← →</b> ride ·{' '}
-              <b className="text-amber-200">Shift</b> gallop ·{' '}
-              <b className="text-amber-200">E / ↓ / Space</b> act ·{' '}
-              <b className="text-amber-200">P</b> pause
+              <b className="text-amber-200">A D / ← →</b>{' '}
+              {mn.controlsShort.ride} · <b className="text-amber-200">Shift</b>{' '}
+              {mn.controlsShort.gallop} ·{' '}
+              <b className="text-amber-200">E / ↓ / {mn.controlsShort.space}</b>{' '}
+              {mn.controlsShort.act} · <b className="text-amber-200">P</b>{' '}
+              {mn.controlsShort.pause}
             </p>
           </div>
         </div>
@@ -275,14 +277,14 @@ export function GameShell() {
       {screen === 'playing' && paused && (
         <Overlay>
           <h2 className="m-0 font-display text-4xl font-extrabold text-amber-100">
-            Paused
+            {mn.pause.title}
           </h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button className={btnPrimary} onClick={resume}>
-              Resume
+              {mn.pause.resume}
             </button>
             <button className={btnGhost} onClick={toMenu}>
-              Save &amp; exit to menu
+              {mn.pause.saveExit}
             </button>
           </div>
         </Overlay>
@@ -291,12 +293,11 @@ export function GameShell() {
       {screen === 'gameover' && summary && (
         <Overlay tone="danger">
           <h2 className="m-0 font-display text-4xl font-extrabold text-red-100 sm:text-5xl">
-            Your kingdom has fallen.
+            {mn.gameOver.title}
           </h2>
           <p className="mt-3 text-base text-red-100/80">{summary.reason}</p>
           <p className="mt-1 text-sm text-red-100/60">
-            Reached day {summary.day} · {summary.kills} raiders defeated ·{' '}
-            {summary.coins} coins gathered
+            {mn.gameOver.summary(summary.day, summary.kills, summary.coins)}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             {hasAutosave && (
@@ -304,14 +305,14 @@ export function GameShell() {
                 className={btnPrimary}
                 onClick={() => start('restartDay')}
               >
-                Restart Day
+                {mn.gameOver.restartDay}
               </button>
             )}
             <button
               className={hasAutosave ? btnGhost : btnPrimary}
               onClick={() => start('new')}
             >
-              New Game
+              {mn.gameOver.newGame}
             </button>
           </div>
         </Overlay>

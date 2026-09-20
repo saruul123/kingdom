@@ -3,10 +3,11 @@ import type { ToastKind } from '../core/events'
 import { isAlive } from '../core/lookup'
 import { bitmap } from './pixel'
 import type { G } from './pixel'
+import { mn } from '../i18n'
 
 const FONT =
   "'Pixelify Sans', 'Press Start 2P', ui-monospace, 'Courier New', monospace"
-const DISPLAY = "'Pixelify Sans', 'Fraunces', Georgia, serif"
+const DISPLAY = "'Pixelify Sans', ui-monospace, monospace"
 
 const TOAST_COLOR: Record<ToastKind, string> = {
   info: '#f4ead2',
@@ -159,7 +160,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   if (!held)
     text(
       g,
-      state.banner.state === 'carried' ? 'STOLEN!' : 'DROPPED',
+      state.banner.state === 'carried' ? mn.bannerStolen : mn.bannerDropped,
       cx + 66 * u,
       cy + 8 * u,
       fs,
@@ -168,7 +169,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
 
   // --- day / night indicator (top-centre)
   const night = state.currentPhase === 'Night'
-  const pw = 78 * u
+  const pw = 100 * u
   const px0 = Math.round(o.W / 2 - pw / 2)
   panel(g, px0, cy, pw, 15 * u, u, night ? '#7f8fd8' : '#c9a24a')
   bitmap(
@@ -181,7 +182,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   )
   text(
     g,
-    `${night ? 'Night' : 'Day'} ${state.currentDay}`,
+    night ? mn.nightN(state.currentDay) : mn.dayN(state.currentDay),
     px0 + 18 * u,
     cy + 8 * u,
     fs,
@@ -189,7 +190,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   )
   text(
     g,
-    state.currentPhase,
+    mn.phase[state.currentPhase],
     px0 + pw - 5 * u,
     cy + 8 * u,
     6 * u,
@@ -237,15 +238,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
     const ew = 52 * u
     const ex = o.W - ew - 6 * u
     panel(g, ex, cy, ew, 15 * u, u, '#d9534f')
-    text(
-      g,
-      `Raiders ${alive}`,
-      ex + ew / 2,
-      cy + 8 * u,
-      fs,
-      '#ffd2c8',
-      'center',
-    )
+    text(g, mn.raiders(alive), ex + ew / 2, cy + 8 * u, fs, '#ffd2c8', 'center')
   }
 
   // --- toasts
@@ -328,8 +321,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
     ui.hintTime < 40 &&
     state.status === 'playing'
   ) {
-    const msg =
-      'A D / ← →  ride    Shift  gallop    E / ↓ / Space  act    P  pause'
+    const msg = mn.controlsHint
     g.globalAlpha = Math.min(1, (40 - ui.hintTime) / 4)
     g.font = `600 ${7 * u}px ${FONT}`
     const w = Math.ceil(g.measureText(msg).width) + 14 * u

@@ -7,6 +7,7 @@ import type {
 import type { InputSource } from '../input/Input'
 import { approach, clamp } from '../core/math'
 import type { UIManager } from '../ui/UIManager'
+import { mn } from '../i18n'
 
 /** Rides the hero, picks the nearest interaction and executes it on key press. */
 export class PlayerController implements System {
@@ -62,7 +63,7 @@ export class PlayerController implements System {
         delay: 0,
       }
       bus.emit('bannerRecovered', {})
-      bus.emit('toast', { text: 'You recovered the banner.', kind: 'good' })
+      bus.emit('toast', { text: mn.bannerRecovered, kind: 'good' })
     }
   }
 
@@ -90,7 +91,7 @@ export class PlayerController implements System {
     const affordable = state.coins >= best.cost
     const label = best.disabledReason
       ? `${best.label} — ${best.disabledReason}`
-      : `${best.label} — ${best.cost} ${best.cost === 1 ? 'Coin' : 'Coins'}`
+      : `${best.label} — ${mn.coins(best.cost)}`
     this.ui.setPrompt({
       x: best.x,
       text: label,
@@ -101,7 +102,7 @@ export class PlayerController implements System {
     if (!best.enabled || !affordable) {
       bus.emit('sfx', { name: 'deny' })
       if (best.enabled)
-        bus.emit('toast', { text: 'Not enough coins.', kind: 'warning' })
+        bus.emit('toast', { text: mn.notEnoughCoins, kind: 'warning' })
       return
     }
     best.execute()

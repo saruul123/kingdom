@@ -3,7 +3,7 @@
 
 @theme {
   --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
 }
 
 html,

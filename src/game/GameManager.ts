@@ -7,6 +7,7 @@ import type {
   Systems,
 } from './core/context'
 import { EventBus } from './core/events'
+import { mn } from './i18n'
 import { Rng } from './core/rng'
 import { newGameState } from './core/state'
 import type { GameState } from './core/types'
@@ -139,14 +140,13 @@ export class GameManager {
 
     ctx.bus.on('gameOver', ({ reason }) => this.endGame(reason))
     ctx.bus.on('buildingDestroyed', ({ type }) => {
-      if (type === 'ger')
-        ctx.bus.emit('gameOver', { reason: 'The Central Ger has fallen.' })
+      if (type === 'ger') ctx.bus.emit('gameOver', { reason: mn.reasonGerFell })
     })
 
     if (isNew) {
       world.generate()
       wildlife.populate()
-      ui.announce('Day 1')
+      ui.announce(mn.dayN(1))
       save.save('autosave')
     }
   }

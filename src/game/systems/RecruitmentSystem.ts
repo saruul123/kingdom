@@ -6,6 +6,7 @@ import type {
 } from '../core/context'
 import { findById, isAlive } from '../core/lookup'
 import { gerOffset } from './ProfessionSystem'
+import { mn } from '../i18n'
 
 /** Pay 1 coin to turn a neutral citizen into one of your people. */
 export class RecruitmentSystem implements System, InteractionProvider {
@@ -21,7 +22,7 @@ export class RecruitmentSystem implements System, InteractionProvider {
         id: `recruit:${c.id}`,
         x: c.x,
         radius: config.recruitRadius,
-        label: 'Recruit',
+        label: mn.recruit,
         cost: config.recruitCost,
         enabled: true,
         execute: () => this.recruit(c.id),
@@ -46,6 +47,6 @@ export class RecruitmentSystem implements System, InteractionProvider {
     c.timer = 0
     bus.emit('citizenRecruited', { id })
     bus.emit('sfx', { name: 'recruit' })
-    bus.emit('toast', { text: 'A citizen joins your camp.', kind: 'good' })
+    bus.emit('toast', { text: mn.citizenJoined, kind: 'good' })
   }
 }

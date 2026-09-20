@@ -1,7 +1,8 @@
 # Монгол хаант улс
 
 2D side-scrolling steppe survival / kingdom-building game (spec: `../project.md`).
-Canvas 2D + TypeScript, served by TanStack Start.
+Canvas 2D + TypeScript, served by TanStack Start. The whole UI is in Mongolian (`src/game/i18n.ts`;
+unit/building/enemy names live in the `label` fields of `src/game/config/*.json`).
 
 ```bash
 npm run dev      # http://localhost:3000
@@ -16,7 +17,7 @@ Add `?debug=1` to the URL for an FPS/state overlay, `window.__game`, and
 
 | Key | Action |
 | --- | --- |
-| ← → / A D | Ride |
+| ← → / A D | Ride (давхих) |
 | Shift | Gallop (stamina) |
 | E / ↓ / Space | Recruit, build, make Archer/Builder at a tool rack |
 | P / Esc | Pause |

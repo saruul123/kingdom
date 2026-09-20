@@ -6,6 +6,7 @@ import type {
 } from '../core/context'
 import { isAlive } from '../core/lookup'
 import type { Citizen } from '../core/types'
+import { mn } from '../i18n'
 
 export const gerOffset = (ctx: GameContext, dx: number): number =>
   (ctx.sys.buildings.ger()?.x ?? 0) + dx
@@ -41,10 +42,10 @@ export class ProfessionSystem implements System, InteractionProvider {
         id: `stand:${stand.id}`,
         x: stand.x,
         radius: 34,
-        label: `${stand.label}: make ${def.label}`,
+        label: mn.makeProfession(stand.label, def.label),
         cost: def.cost,
         enabled: free > 0,
-        disabledReason: free > 0 ? undefined : 'No free citizens',
+        disabledReason: free > 0 ? undefined : mn.noFreeCitizens,
         execute: () => this.assign(stand.x, stand.profession),
       })
     }

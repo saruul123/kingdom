@@ -4,6 +4,7 @@ import type { Citizen } from '../core/types'
 import { gerX, isDusk, moveToward, nearestEnemyDistance } from './helpers'
 import { go } from './stateMachine'
 import type { Nodes } from './stateMachine'
+import { mn } from '../i18n'
 
 /** Idle/wandering behaviour shared by neutral and unemployed citizens. */
 function wander(
@@ -72,7 +73,7 @@ export const citizenNodes: Nodes<Citizen> = {
     u.health = def.health
     ctx.bus.emit('professionAssigned', { id: u.id, profession })
     ctx.bus.emit('toast', {
-      text: `A citizen became ${/^[aeiou]/i.test(def.label) ? 'an' : 'a'} ${def.label}.`,
+      text: mn.citizenBecame(def.label),
       kind: 'good',
     })
     go(u, 'Idle', 'Idle')

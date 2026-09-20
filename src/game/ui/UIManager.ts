@@ -1,5 +1,6 @@
 import type { GameContext, System } from '../core/context'
 import type { ToastKind } from '../core/events'
+import { mn } from '../i18n'
 
 export interface Prompt {
   x: number
@@ -28,14 +29,14 @@ export class UIManager implements System {
     bus.on('toast', ({ text, kind }) => this.toast(text, kind))
     bus.on('coinsChanged', () => (this.coinPulse = 1))
     bus.on('phaseChanged', ({ phase, day }) => {
-      if (phase === 'Sunrise') this.announce(`Day ${day}`)
+      if (phase === 'Sunrise') this.announce(mn.dayN(day))
       if (phase === 'Sunset') {
-        this.announce('The sun is setting...')
+        this.announce(mn.sunSetting)
         bus.emit('sfx', { name: 'horn' })
       }
-      if (phase === 'Night') this.announce(`Night ${day}`)
+      if (phase === 'Night') this.announce(mn.nightN(day))
     })
-    bus.on('nightCleared', () => this.toast('You survived the night.', 'good'))
+    bus.on('nightCleared', () => this.toast(mn.nightSurvived, 'good'))
   }
 
   toast(text: string, kind: ToastKind = 'info'): void {

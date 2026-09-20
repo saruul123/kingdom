@@ -6,6 +6,7 @@ import { go } from './stateMachine'
 import type { Nodes } from './stateMachine'
 import { faceToward, moveToward } from './helpers'
 import { sideOf } from '../core/math'
+import { mn } from '../i18n'
 
 const RETARGET_INTERVAL = 0.6
 
@@ -179,7 +180,7 @@ function applyHit(e: Enemy, ctx: GameContext, t: Resolved): void {
       state.banner = { state: 'carried', x: e.x, carrierId: e.id, delay: 0 }
       e.carryingBanner = true
       bus.emit('toast', {
-        text: 'An enemy has seized the banner!',
+        text: mn.bannerSeized,
         kind: 'danger',
       })
       go(e, 'Escape', 'Fleeing')
@@ -267,7 +268,7 @@ export const enemyNodes: Nodes<Enemy> = {
     ctx.state.banner.x = e.x
     if (!ctx.sys.territory.contains(e.x)) {
       ctx.bus.emit('gameOver', {
-        reason: 'The banner was carried out of your lands.',
+        reason: mn.reasonBannerLost,
       })
     }
   },

@@ -1,5 +1,15 @@
 import { C } from './palette'
-import { bitmap, disc, ellipse, hash, light, line, px, shade, tint } from './pixel'
+import {
+  bitmap,
+  disc,
+  ellipse,
+  hash,
+  light,
+  line,
+  px,
+  shade,
+  tint,
+} from './pixel'
 import type { G } from './pixel'
 
 /**

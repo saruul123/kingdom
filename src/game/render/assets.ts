@@ -10,7 +10,17 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-/** Loads the image assets the renderer needs (the mounted-archer atlas). */
+/** Make sure the pixel font (incl. Ө/Ү) is ready before the canvas HUD first draws with it. */
+async function loadFont(): Promise<void> {
+  const ready = document.fonts
+    .load('600 16px "Pixelify Sans"', 'Өө Үү Аа')
+    .then(() => undefined)
+    .catch(() => undefined)
+  await Promise.race([ready, new Promise<void>((r) => setTimeout(r, 2000))])
+}
+
+/** Loads what the renderer needs: the mounted-archer atlas and the pixel font. */
 export async function loadAssets(): Promise<Assets> {
-  return { hero: await loadImage(heroUrl) }
+  const [hero] = await Promise.all([loadImage(heroUrl), loadFont()])
+  return { hero }
 }

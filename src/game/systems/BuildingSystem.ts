@@ -7,6 +7,7 @@ import type {
 } from '../core/context'
 import { findById, isAlive, isBuildingStanding, newId } from '../core/lookup'
 import type { Building, BuildingType, Citizen, Side } from '../core/types'
+import { mn } from '../i18n'
 
 export function createBuilding(
   ctx: GameContext,
@@ -53,7 +54,7 @@ export class BuildingSystem
     state.buildings = state.buildings.filter((b) => b.state !== 'Destroyed')
     if (state.buildings.length !== before) {
       bus.emit('toast', {
-        text: 'A structure has been destroyed!',
+        text: mn.structureDestroyed,
         kind: 'danger',
       })
     }
@@ -81,7 +82,7 @@ export class BuildingSystem
         id: `build:${point.id}`,
         x: point.x,
         radius: 40,
-        label: `Build ${def.label}`,
+        label: mn.build(def.label),
         cost: def.cost,
         enabled: true,
         execute: () => this.orderBuild(point.id),

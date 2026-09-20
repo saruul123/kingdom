@@ -1,6 +1,6 @@
 {
   "bandit": {
-    "label": "Bandit",
+    "label": "Дээрэмчин",
     "health": 30,
     "damage": 6,
     "movementSpeed": 62,

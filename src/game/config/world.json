@@ -10,12 +10,17 @@
     { "id": "wallR2", "building": "wall", "x": 500, "requires": "wallR1" }
   ],
   "stands": [
-    { "id": "bowRack", "profession": "archer", "x": -75, "label": "Bow Rack" },
+    {
+      "id": "bowRack",
+      "profession": "archer",
+      "x": -75,
+      "label": "Нумын тавиур"
+    },
     {
       "id": "hammerRack",
       "profession": "builder",
       "x": 75,
-      "label": "Hammer Rack"
+      "label": "Алхны тавиур"
     }
   ],
   "camps": {
@@ -42,7 +47,7 @@
   "ovoos": { "count": 4, "minX": 800, "maxX": 2800 },
   "wildlife": {
     "rabbit": {
-      "label": "Rabbit",
+      "label": "Туулай",
       "health": 4,
       "speed": 55,
       "fleeSpeed": 95,
@@ -51,7 +56,7 @@
       "perSide": 5
     },
     "deer": {
-      "label": "Deer",
+      "label": "Буга",
       "health": 16,
       "speed": 70,
       "fleeSpeed": 120,
