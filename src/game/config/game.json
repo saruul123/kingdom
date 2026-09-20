@@ -1,8 +1,8 @@
 {
   "time": {
-    "dayDuration": 360,
-    "nightDuration": 120,
-    "sunsetDuration": 30,
+    "dayDuration": 180,
+    "nightDuration": 90,
+    "sunsetDuration": 20,
     "sunriseDuration": 8,
     "nightEndsWhenCleared": true,
     "spawnWindow": 0.45
