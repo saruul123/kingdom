@@ -43,9 +43,17 @@ export class PlayerController implements System {
     }
 
     const top = h.sprinting ? c.sprintSpeed : c.speed
-    h.vx = approach(h.vx, dir * top, c.acceleration * dt)
+    // A mount coasts into a stop, but should not keep sliding after release.
+    const acceleration = dir === 0 ? c.acceleration * 1.35 : c.acceleration
+    h.vx = approach(h.vx, dir * top, acceleration * dt)
     h.x = clamp(h.x + h.vx * dt, config.world.minX, config.world.maxX)
-    if (dir !== 0) h.facing = dir > 0 ? 1 : -1
+    if (
+      (h.x === config.world.minX && h.vx < 0) ||
+      (h.x === config.world.maxX && h.vx > 0)
+    )
+      h.vx = 0
+    // Wait until the horse has actually turned before mirroring the artwork.
+    if (Math.abs(h.vx) > 8) h.facing = h.vx > 0 ? 1 : -1
   }
 
   private pickupBanner(dt: number): void {

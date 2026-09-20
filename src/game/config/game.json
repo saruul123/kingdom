@@ -8,9 +8,9 @@
     "spawnWindow": 0.45
   },
   "hero": {
-    "speed": 190,
-    "sprintSpeed": 330,
-    "acceleration": 900,
+    "speed": 175,
+    "sprintSpeed": 275,
+    "acceleration": 620,
     "maxStamina": 5,
     "staminaDrain": 1,
     "staminaRegen": 0.8,

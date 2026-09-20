@@ -1,19 +1,20 @@
 import type { GameManager } from '../GameManager'
 import { clamp, lerp } from '../core/math'
-import { findById } from '../core/lookup'
+import { findById, isBuildingStanding } from '../core/lookup'
 import type { Citizen, Enemy } from '../core/types'
 import { BANK, drawReflection, makeAtmosphere } from './atmosphere'
 import type { Atmosphere } from './atmosphere'
 import { drawHud } from './hud'
-import { ellipse, px } from './pixel'
+import { ellipse, hash, px } from './pixel'
 import type { G } from './pixel'
-import { C } from './palette'
+import { C, tri } from './palette'
 import {
   drawAnimal,
   drawArrow,
   drawBanner,
   drawBar,
   drawBorderPost,
+  drawBuildSite,
   drawCoin,
   drawCutout,
   drawFlame,
@@ -21,6 +22,7 @@ import {
   drawOvoo,
   drawPerson,
   drawStand,
+  drawStandMarker,
   drawTorchPole,
   drawTower,
   drawWall,
@@ -96,8 +98,8 @@ export class Renderer {
 
     // camera (buffer pixels == world units)
     const halfView = bw / 2
-    const target = state.hero.x + state.hero.facing * 40
-    this.camX += (target - this.camX) * Math.min(1, dt * 4)
+    const target = state.hero.x + clamp(state.hero.vx * 0.1, -28, 28)
+    this.camX += (target - this.camX) * Math.min(1, dt * 3)
     this.camX = clamp(
       this.camX,
       game.config.world.minX + halfView - 160,
@@ -110,6 +112,10 @@ export class Renderer {
     // --- background scene
     s.setTransform(1, 0, 0, 1, 0, 0)
     this.drawBackdrop(s, bw, bh, cx, atm)
+    this.drawForegroundGround(s, bw, groundY, cx, atm)
+    s.setTransform(1, 0, 0, 1, Math.round(bw / 2 - cx), groundY)
+    this.drawGameplayCues(s, cx - bw / 2, cx + bw / 2)
+    s.setTransform(1, 0, 0, 1, 0, 0)
 
     // --- sprites on a transparent layer so the night tint only touches them
     w.setTransform(1, 0, 0, 1, 0, 0)
@@ -155,7 +161,15 @@ export class Renderer {
       const dw = img.width * scale
       const dh = img.height * scale
       const parallax = clamp(camX * 0.035, -(dw - bw) / 2, (dw - bw) / 2)
-      g.drawImage(img, (bw - dw) / 2 - parallax, (bh - dh) / 2, dw, dh)
+      // The painted grass edge is at ~70% of the image. Keep it under the
+      // entities' feet even when the viewport crops the panorama vertically.
+      g.drawImage(
+        img,
+        (bw - dw) / 2 - parallax,
+        bh * GROUND_FRACTION - dh * 0.7,
+        dw,
+        dh,
+      )
     }
     g.imageSmoothingEnabled = true
     const nightAlpha = clamp(a.w.n + a.w.u * 0.85, 0, 1)
@@ -166,6 +180,80 @@ export class Renderer {
     }
     g.globalAlpha = 1
     g.imageSmoothingEnabled = false
+  }
+
+  /** A world-locked near bank gives the playable plane its own value and motion. */
+  private drawForegroundGround(
+    g: G,
+    width: number,
+    groundY: number,
+    camX: number,
+    a: Atmosphere,
+  ): void {
+    const soil = tri(a.w, '#35452b', '#39382e', '#101d29')
+    const grass = tri(a.w, '#829b3f', '#95804c', '#40533b')
+    const highlight = tri(a.w, '#d4cc73', '#e5ac64', '#92926a')
+    const pebble = tri(a.w, '#c0b99a', '#ac91a0', '#677287')
+
+    g.save()
+    g.globalAlpha = 0.44
+    px(g, soil, 0, groundY + 2, width, BANK + 1)
+    g.globalAlpha = 0.76
+    px(g, grass, 0, groundY, width, 2)
+    g.globalAlpha = 0.55
+    px(g, highlight, 0, groundY - 1, width, 1)
+    g.globalAlpha = 1
+
+    const left = Math.floor(camX - width / 2)
+    const first = Math.floor(left / 13) * 13
+    for (let wx = first; wx < left + width + 13; wx += 13) {
+      const x = wx - left
+      const n = hash(wx * 0.17)
+      if (n > 0.36) {
+        const y = groundY + 3 + Math.floor(hash(wx * 0.47) * 22)
+        px(g, grass, x, y - 2, 1, 3)
+        if (n > 0.78) px(g, highlight, x + 1, y - 1, 1, 2)
+      }
+      if (n < 0.18) {
+        const y = groundY + 9 + Math.floor(hash(wx * 0.31) * 18)
+        px(g, soil, x, y + 1, 5, 2)
+        px(g, pebble, x + 1, y, 3, 1)
+      }
+    }
+    g.restore()
+  }
+
+  /** Important world objects stay bright and legible at every time of day. */
+  private drawGameplayCues(g: G, left: number, right: number): void {
+    const { state, config } = this.game
+    for (const point of config.content.buildPoints) {
+      if (point.x < left - 30 || point.x > right + 30) continue
+      if (point.building !== 'wall' && point.building !== 'tower') continue
+      if (state.buildings.some((b) => b.buildPointId === point.id)) continue
+      if (point.requires) {
+        const prerequisite = state.buildings.find(
+          (b) => b.buildPointId === point.requires,
+        )
+        if (!prerequisite || !isBuildingStanding(prerequisite)) continue
+      }
+      drawBuildSite(g, point.x, point.building, this.t)
+    }
+
+    for (const stand of config.content.stands)
+      if (stand.x >= left - 20 && stand.x <= right + 20)
+        drawStandMarker(g, stand.x, stand.profession, this.t)
+
+    for (const coin of state.coinPickups) {
+      if (coin.x < left - 25 || coin.x > right + 25) continue
+      const drop =
+        coin.delay > 0
+          ? Math.round((coin.delay / config.economy.coinPickupDelay) * 14)
+          : 0
+      g.save()
+      g.translate(0, -drop)
+      drawCoin(g, coin.x, coin.amount, this.t, coin.id)
+      g.restore()
+    }
   }
 
   private atmosphere(): Atmosphere {
@@ -222,7 +310,17 @@ export class Renderer {
 
     for (const c of state.camps) {
       if (!vis(c.x, 120)) continue
-      drawCutout(g, this.assets.ger, c.x - 18, 0, 58, 43, [155, 60, 1225, 910])
+      drawCutout(
+        g,
+        this.assets.ger,
+        c.x - 18,
+        0,
+        58,
+        43,
+        [155, 60, 1225, 910],
+        1,
+        true,
+      )
       const fx = c.x + 40
       px(g, C.stoneDark, fx - 7, -3, 4, 3)
       px(g, C.stone, fx - 3, -4, 4, 4)
@@ -251,7 +349,17 @@ export class Renderer {
       const hurt = b.hitFlash > 0
       if (b.type === 'ger') {
         if (hurt) g.globalAlpha = 0.55
-        drawCutout(g, this.assets.ger, b.x, 0, 124, 94, [155, 60, 1225, 910])
+        drawCutout(
+          g,
+          this.assets.ger,
+          b.x,
+          0,
+          124,
+          94,
+          [155, 60, 1225, 910],
+          1,
+          true,
+        )
         g.globalAlpha = 1
         lights.push({
           x: b.x,
@@ -273,6 +381,8 @@ export class Renderer {
             22,
             def.height,
             [610, 110, 270, 820],
+            1,
+            true,
           )
           g.globalAlpha = 1
         }
@@ -291,7 +401,17 @@ export class Renderer {
         if (building) drawTower(g, b.x, def.height, progress, hurt)
         else {
           if (hurt) g.globalAlpha = 0.55
-          drawCutout(g, this.assets.tower, b.x, 0, 57, 130, [135, 6, 750, 1480])
+          drawCutout(
+            g,
+            this.assets.tower,
+            b.x,
+            0,
+            57,
+            130,
+            [135, 6, 750, 1480],
+            1,
+            true,
+          )
           g.globalAlpha = 1
         }
         if (!building) {
@@ -333,18 +453,6 @@ export class Renderer {
 
     for (const s of config.content.stands)
       if (vis(s.x)) drawStand(g, s.x, s.profession)
-
-    for (const c of state.coinPickups) {
-      if (!vis(c.x)) continue
-      const drop =
-        c.delay > 0
-          ? Math.round((c.delay / config.economy.coinPickupDelay) * 14)
-          : 0
-      g.save()
-      g.translate(0, -drop)
-      drawCoin(g, c.x, c.amount, t, c.id)
-      g.restore()
-    }
 
     if (state.banner.state === 'ground')
       drawCutout(

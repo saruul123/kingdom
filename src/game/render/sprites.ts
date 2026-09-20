@@ -220,31 +220,35 @@ export function drawCutout(
   height: number,
   crop: readonly [number, number, number, number],
   facing: 1 | -1 = 1,
+  emphasize = false,
 ): void {
   g.save()
   g.translate(Math.round(x), Math.round(y))
   g.scale(facing, 1)
+  if (emphasize) {
+    g.shadowColor = 'rgba(5,13,24,0.95)'
+    g.shadowBlur = 5
+    g.shadowOffsetY = 2
+  }
   g.drawImage(img, ...crop, -width / 2, -height, width, height)
   g.restore()
 }
 
-/** The reference archer is a single cutout; a small bob keeps riding readable. */
+/** Keep the single-frame mount grounded, with a restrained distance-based gait. */
 export function drawHero(
   g: G,
   assets: Assets,
   x: number,
   y: number,
   facing: 1 | -1,
-  t: number,
+  _t: number,
   speed01: number,
   sprinting: boolean,
 ): void {
-  const moving = speed01 > 0.06
-  const bob = moving
-    ? Math.sin(t * (sprinting ? 19 : 12)) * (sprinting ? 2 : 1)
-    : 0
-  px(g, 'rgba(0,0,0,0.3)', x - 26, y - 2, 52, 3)
-  drawCutout(g, assets.hero, x, y + bob, 108, 78, [90, 48, 1290, 910], facing)
+  const gait = Math.min(1, speed01 * (sprinting ? 1.15 : 1.65))
+  const bob = gait > 0.08 ? Math.max(0, Math.sin(x * 0.12)) * gait * 1.25 : 0
+  ellipse(g, 'rgba(15,20,12,0.34)', x, y - 1, 30, 3)
+  drawCutout(g, assets.hero, x, y - bob, 108, 78, [90, 48, 1290, 910], facing)
 }
 
 // ------------------------------------------------------------------ banner
@@ -581,6 +585,52 @@ export function drawStand(
   g.restore()
 }
 
+/** Persistent, high-contrast sign for a place where the player can build. */
+export function drawBuildSite(
+  g: G,
+  x: number,
+  type: 'wall' | 'tower',
+  t: number,
+): void {
+  x = Math.round(x)
+  ellipse(g, 'rgba(7,16,24,0.58)', x, 1, 15, 3)
+  px(g, '#172535', x - 12, -32, 24, 26)
+  px(g, '#e4b94f', x - 12, -32, 24, 2)
+  px(g, '#e4b94f', x - 12, -8, 24, 2)
+  px(g, '#e4b94f', x - 12, -30, 2, 22)
+  px(g, '#e4b94f', x + 10, -30, 2, 22)
+  px(g, '#365b80', x - 8, -27, 16, 16)
+  if (type === 'tower') {
+    px(g, '#eef4df', x - 5, -22, 10, 2)
+    px(g, '#eef4df', x - 3, -20, 2, 7)
+    px(g, '#eef4df', x + 1, -20, 2, 7)
+    px(g, '#eef4df', x - 6, -24, 12, 2)
+  } else {
+    for (const dx of [-5, -1, 3]) px(g, '#eef4df', x + dx, -25, 3, 12)
+  }
+  const glint = Math.sin(t * 3 + x) > 0.65 ? '#fff8ce' : '#f0d47d'
+  px(g, glint, x - 1, -38, 3, 3)
+  px(g, '#37475a', x - 10, -6, 3, 6)
+  px(g, '#37475a', x + 7, -6, 3, 6)
+}
+
+/** A small beacon above an equipment stand, separate from the scenery. */
+export function drawStandMarker(
+  g: G,
+  x: number,
+  profession: 'archer' | 'builder',
+  t: number,
+): void {
+  x = Math.round(x)
+  const rim = profession === 'archer' ? '#64cbd4' : '#efbb62'
+  const lift = Math.round(Math.sin(t * 2.5 + x) * 1)
+  px(g, '#152334', x - 8, -43 + lift, 16, 12)
+  px(g, rim, x - 8, -43 + lift, 16, 2)
+  px(g, rim, x - 8, -33 + lift, 16, 2)
+  px(g, '#f8f0d7', x - 1, -40 + lift, 2, 6)
+  px(g, '#f8f0d7', x - 3, -38 + lift, 6, 2)
+}
+
 export function drawBorderPost(g: G, x: number, t: number): void {
   g.save()
   g.translate(Math.round(x), 0)
@@ -604,19 +654,21 @@ export function drawCoin(
   t: number,
   seed: number,
 ): void {
-  const n = Math.min(amount, 6)
+  const n = Math.min(amount, 3)
+  const bob = Math.round(Math.sin(t * 3 + seed) * 1.5)
+  ellipse(g, 'rgba(6,13,23,0.62)', x, 0, 12, 3)
+  ellipse(g, 'rgba(255,207,75,0.2)', x, -13 + bob, 15, 13)
   for (let i = 0; i < n; i++) {
-    const bob = Math.round(Math.sin(t * 3 + seed + i) * 0.7 + 0.5)
-    const cx =
-      Math.round(x) +
-      ((i % 3) - 1) * 5 -
-      (n < 3 ? Math.round((n - 1) * 2.5) - 0 : 0)
-    const cy = -3 - bob - Math.floor(i / 3) * 4
-    px(g, C.goldDark, cx - 2, cy - 1, 5, 3)
-    px(g, C.goldDark, cx - 1, cy - 2, 3, 5)
-    px(g, C.gold, cx - 1, cy - 1, 3, 3)
-    px(g, '#fff2a8', cx - 1, cy - 1, 1, 1)
+    const cx = Math.round(x) + (i - (n - 1) / 2) * 8
+    const cy = -13 + bob - (i % 2) * 2
+    disc(g, '#172332', cx, cy, 6)
+    disc(g, C.goldDark, cx, cy, 5)
+    disc(g, '#ffd653', cx, cy, 4)
+    px(g, '#fff9cf', cx - 2, cy - 3, 2, 2)
+    px(g, '#a66519', cx + 2, cy + 1, 1, 2)
   }
+  px(g, '#fff4ac', Math.round(x) - 1, -27 + bob, 2, 5)
+  px(g, '#fff4ac', Math.round(x) - 3, -25 + bob, 6, 2)
 }
 
 export function drawArrow(
