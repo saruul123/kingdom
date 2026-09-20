@@ -63,10 +63,17 @@ export const citizenNodes: Nodes<Citizen> = {
     if (!moveToward(ctx, u, u.postX, ctx.config.citizen.speed * 1.2, dt, 6))
       return
     const profession = u.pendingProfession
+    const { archer, builder, herder, horseman, trader } = ctx.config.professions
     const def =
       profession === 'Archer'
-        ? ctx.config.professions.archer
-        : ctx.config.professions.builder
+        ? archer
+        : profession === 'Builder'
+          ? builder
+          : profession === 'Herder'
+            ? herder
+            : profession === 'Horseman'
+              ? horseman
+              : trader
     u.profession = profession
     u.pendingProfession = null
     u.maxHealth = def.health

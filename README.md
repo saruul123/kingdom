@@ -36,9 +36,27 @@ Phases 6–9 (horsemen, territory, trade, boss nights…) are not started.
   builders do the work. Upgraded towers hold 3 archers and shoot further.
 - **Raid warning:** the night's wave is planned at dusk; the HUD shows how many raiders come from each side,
   and off-screen raiders get edge arrows at night.
+- **Income that never runs out:** a dawn tax is left at the ger (`economy.tax`), new treasure caches keep
+  appearing (`caches.respawnPerDay`, closer to home via `respawnMinX`), and herders at a **pasture**
+  (`buildings.json` → `pasture`, `professions.json` → `herder`) produce a coin every few seconds.
 - **Loot:** raiders may drop a coin (`coinDropChance` in `config/enemies.json`).
 - **UX:** next-step objective with a pointer, population panel, fog-of-war map (fills in as you explore),
   floating `+N` / `-N`, hold the action key to repeat, auto-pause when the tab is hidden, remembered mute.
+
+## Expansion systems (spec phases 6–9)
+
+- **Enemies:** bandits, archer raiders (ranged), horse raiders (fast, hunt citizens), heavy soldiers
+  and siege rams (gates/walls first, big structure damage) — all data in `config/enemies.json` /
+  `config/waves.json`. Every 7th night is a **boss night** (bigger raid, reward chest).
+- **Hero combat:** hold `F` (or `J`) to shoot raiders, game and enemy camps. Wolves bite.
+- **Enemy camps → outposts:** camps keep guards and add raiders to every night's raid. Destroy one for loot,
+  then pay for an **outpost**: builders raise it, the border moves out and new build points open.
+- **Eras:** upgrade the central ger (kingdom level 1→4) to unlock gates, stables, markets, stone walls,
+  stronger towers and relay stations (`minKingdomLevel` in the building data).
+- **Horsemen** (stable) patrol and charge raiders. **Traders** (market) run routes to camps/outposts —
+  longer routes pay more. **Örtöö** relay stations give the hero speed and fast travel.
+- **Steppe events:** offerings at ovoos (blessing / coins), wells (stamina + speed), ruins (loot, sometimes an ambush).
+- **Meta:** difficulty (menu), 11 achievements (pause menu), generative music, autosave + exit save.
 
 ## Layout (`src/game`)
 

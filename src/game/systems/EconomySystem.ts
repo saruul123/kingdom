@@ -1,10 +1,31 @@
 import type { EconomyApi, GameContext, System } from '../core/context'
 import { newId } from '../core/lookup'
 import type { CoinPickup } from '../core/types'
+import { mn } from '../i18n'
 
 /** Owns the hero's coin purse and every coin lying on the ground. */
 export class EconomySystem implements System, EconomyApi {
-  constructor(private ctx: GameContext) {}
+  constructor(private ctx: GameContext) {
+    ctx.bus.on('phaseChanged', ({ phase }) => {
+      if (phase === 'Sunrise') this.collectTax()
+    })
+  }
+
+  /**
+   * Every dawn the people leave a tax at the ger, so the kingdom always earns
+   * a little even when the steppe has been picked clean.
+   */
+  private collectTax(): void {
+    const { state, config, sys, bus } = this.ctx
+    const citizens = state.citizens.filter(
+      (c) => c.owner === 'player' && c.state !== 'Dead',
+    ).length
+    const tax = config.economy.tax
+    const amount = tax.base + Math.floor(citizens / tax.perCitizens)
+    if (amount <= 0) return
+    this.dropCoins(sys.buildings.ger()?.x ?? 0, amount, 'income')
+    bus.emit('toast', { text: mn.taxCollected(amount), kind: 'good' })
+  }
 
   update(dt: number): void {
     const { state, config, bus } = this.ctx

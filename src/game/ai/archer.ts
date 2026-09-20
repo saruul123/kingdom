@@ -120,7 +120,11 @@ function shoot(
         ? ctx.sys.buildings.heightOf(tower) + 26
         : 26,
     target: { kind, id },
-    damage: d.damage,
+    damage:
+      d.damage *
+      (ctx.state.blessing > 0
+        ? 1 + ctx.config.content.ovooOffering.damageBonus
+        : 1),
     speed: d.arrowSpeed,
     sourceId: u.id,
   })

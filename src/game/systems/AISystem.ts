@@ -1,6 +1,9 @@
 import { archerNodes, archerPhaseControl } from '../ai/archer'
 import { builderNodes } from '../ai/builder'
 import { citizenNodes } from '../ai/citizen'
+import { herderNodes, herderPhaseControl } from '../ai/herder'
+import { horsemanNodes } from '../ai/horseman'
+import { traderNodes, traderPhaseControl } from '../ai/trader'
 import { enemyNodes } from '../ai/enemy'
 import { runMachine } from '../ai/stateMachine'
 import type { GameContext, System } from '../core/context'
@@ -16,6 +19,14 @@ export class AISystem implements System {
       if (c.owner === 'player' && c.profession === 'Archer') {
         archerPhaseControl(c, this.ctx)
         runMachine(archerNodes, c, this.ctx, dt)
+      } else if (c.owner === 'player' && c.profession === 'Trader') {
+        traderPhaseControl(c, this.ctx)
+        runMachine(traderNodes, c, this.ctx, dt)
+      } else if (c.owner === 'player' && c.profession === 'Horseman') {
+        runMachine(horsemanNodes, c, this.ctx, dt)
+      } else if (c.owner === 'player' && c.profession === 'Herder') {
+        herderPhaseControl(c, this.ctx)
+        runMachine(herderNodes, c, this.ctx, dt)
       } else if (c.owner === 'player' && c.profession === 'Builder') {
         runMachine(builderNodes, c, this.ctx, dt)
       } else {

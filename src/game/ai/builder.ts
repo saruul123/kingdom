@@ -38,6 +38,11 @@ function builderCount(
   ).length
 }
 
+/** After sunset builders stay home rather than walk out to distant outposts. */
+function tooFarAtDusk(ctx: GameContext, b: Building): boolean {
+  return isDusk(ctx) && Math.abs(b.x - gerX(ctx)) > 700
+}
+
 const ratio = (b: Building) => b.health / b.maxHealth
 
 /**
@@ -47,7 +52,8 @@ const ratio = (b: Building) => b.health / b.maxHealth
 function pickTask(u: Citizen, ctx: GameContext): Building | undefined {
   const buildings = ctx.state.buildings
   const safe = (b: Building) =>
-    nearestEnemyDistance(ctx, workSpot(ctx, b)) > DANGER_RANGE
+    nearestEnemyDistance(ctx, workSpot(ctx, b)) > DANGER_RANGE &&
+    !tooFarAtDusk(ctx, b)
   const byDistance = (a: Building, b: Building) =>
     Math.abs(a.x - u.x) - Math.abs(b.x - u.x)
 
@@ -117,7 +123,10 @@ export const builderNodes: Nodes<Citizen> = {
   MoveToTask(u, ctx, dt) {
     const b = findById(ctx.state.buildings, u.target?.id)
     if (!b || b.state === 'Destroyed') return go(u, 'Idle', 'Idle')
-    if (nearestEnemyDistance(ctx, workSpot(ctx, b)) <= DANGER_RANGE)
+    if (
+      nearestEnemyDistance(ctx, workSpot(ctx, b)) <= DANGER_RANGE ||
+      tooFarAtDusk(ctx, b)
+    )
       return go(u, 'Idle', 'Idle')
     if (!moveToward(ctx, u, workSpot(ctx, b), def(ctx).speed, dt, 4)) return
     const constructing =

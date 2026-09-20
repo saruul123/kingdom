@@ -9,12 +9,62 @@
     "heroAggroRange": 140,
     "targetPriority": [
       "banner",
+      "gate",
       "wall",
       "tower",
       "defender",
       "citizen",
+      "economy",
       "palace"
     ],
-    "coinDropChance": 0.5
+    "coinDropChance": 0.6
+  },
+  "archer_raider": {
+    "label": "Харваач дээрэмчин",
+    "health": 22,
+    "damage": 5,
+    "movementSpeed": 56,
+    "attackRange": 230,
+    "attackCooldown": 1.7,
+    "heroAggroRange": 200,
+    "ranged": true,
+    "projectileSpeed": 420,
+    "targetPriority": ["defender", "tower", "citizen", "wall", "palace"],
+    "coinDropChance": 0.6
+  },
+  "horse_raider": {
+    "label": "Морьт дээрэмчин",
+    "health": 26,
+    "damage": 5,
+    "movementSpeed": 130,
+    "attackRange": 30,
+    "attackCooldown": 0.9,
+    "heroAggroRange": 220,
+    "targetPriority": ["citizen", "economy", "defender", "wall", "palace"],
+    "coinDropChance": 0.7
+  },
+  "heavy": {
+    "label": "Хүнд дайчин",
+    "health": 95,
+    "damage": 11,
+    "movementSpeed": 40,
+    "attackRange": 34,
+    "attackCooldown": 1.3,
+    "heroAggroRange": 100,
+    "structureDamageMultiplier": 1.5,
+    "targetPriority": ["gate", "wall", "palace"],
+    "coinDropChance": 0.9
+  },
+  "siege": {
+    "label": "Бүслэлтийн машин",
+    "health": 150,
+    "damage": 30,
+    "movementSpeed": 28,
+    "attackRange": 44,
+    "attackCooldown": 2.2,
+    "heroAggroRange": 0,
+    "structureDamageMultiplier": 2.5,
+    "targetPriority": ["gate", "wall", "tower", "palace"],
+    "coinDropChance": 1
   }
 }

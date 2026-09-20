@@ -33,48 +33,94 @@ export function drawPopulation(
   x: number,
   y: number,
   u: number,
-): void {
+  maxWidth: number,
+): number {
   const { state, config } = game
   const mine = state.citizens.filter((c) => c.owner === 'player' && isAlive(c))
+  const count = (
+    p: 'Citizen' | 'Archer' | 'Builder' | 'Herder' | 'Horseman' | 'Trader',
+  ) => mine.filter((c) => c.profession === p).length
   const chips: { colour: string; label: string; n: number }[] = [
-    {
-      colour: '#5f86c8',
-      label: mn.population.citizens,
-      n: mine.filter((c) => c.profession === 'Citizen').length,
-    },
+    { colour: '#5f86c8', label: mn.population.citizens, n: count('Citizen') },
     {
       colour: '#2c7a72',
       label: config.professions.archer.label,
-      n: mine.filter((c) => c.profession === 'Archer').length,
+      n: count('Archer'),
     },
     {
       colour: '#c07a30',
       label: config.professions.builder.label,
-      n: mine.filter((c) => c.profession === 'Builder').length,
+      n: count('Builder'),
     },
   ]
+  if (count('Horseman') > 0 || state.buildings.some((b) => b.type === 'stable'))
+    chips.push({
+      colour: '#4f7fe0',
+      label: config.professions.horseman.label,
+      n: count('Horseman'),
+    })
+  if (count('Trader') > 0 || state.buildings.some((b) => b.type === 'market'))
+    chips.push({
+      colour: '#d8a838',
+      label: config.professions.trader.label,
+      n: count('Trader'),
+    })
+  if (state.blessing > 0)
+    chips.push({ colour: '#ffe9a0', label: mn.blessed, n: state.blessing })
+  chips.push({
+    colour: '#e8b823',
+    label: mn.eraName(state.era),
+    n: state.kingdomLevel,
+  })
+  // herders only matter once there is somewhere for them to work
+  if (count('Herder') > 0 || state.buildings.some((b) => b.type === 'pasture'))
+    chips.push({
+      colour: '#9a63d6',
+      label: config.professions.herder.label,
+      n: count('Herder'),
+    })
   g.font = `600 ${6 * u}px ${FONT}`
   const widths = chips.map(
     (c) => Math.ceil(g.measureText(`${c.label} ${c.n}`).width) + 9 * u,
   )
-  const total = widths.reduce((a, b) => a + b, 0) + 4 * u
-  panel(g, x, y, total, 13 * u, u, '#6b5a3a')
-  let cx = x + 4 * u
-  chips.forEach((c, i) => {
-    g.fillStyle = c.colour
-    g.fillRect(cx, y + 4 * u, 4 * u, 5 * u)
-    g.fillStyle = 'rgba(255,255,255,0.35)'
-    g.fillRect(cx, y + 4 * u, 4 * u, u)
-    text(
-      g,
-      `${c.label} ${c.n}`,
-      cx + 6 * u,
-      y + 7 * u,
-      6 * u,
-      c.n > 0 ? '#fff3cf' : 'rgba(255,243,207,0.45)',
-    )
-    cx += widths[i]
+  // wrap onto more rows rather than run under the map
+  const rows: number[][] = [[]]
+  let rowW = 4 * u
+  chips.forEach((_, i) => {
+    if (rowW + widths[i] > maxWidth && rows[rows.length - 1].length > 0) {
+      rows.push([])
+      rowW = 4 * u
+    }
+    rows[rows.length - 1].push(i)
+    rowW += widths[i]
   })
+  const widest = Math.max(
+    ...rows.map((r) => r.reduce((sum, i) => sum + widths[i], 4 * u)),
+  )
+  const rowH = 11 * u
+  const height = 2 * u + rows.length * rowH
+  panel(g, x, y, widest, height, u, '#6b5a3a')
+  rows.forEach((row, r) => {
+    let cx = x + 4 * u
+    const cy = y + u + r * rowH
+    for (const i of row) {
+      const c = chips[i]
+      g.fillStyle = c.colour
+      g.fillRect(cx, cy + 3 * u, 4 * u, 5 * u)
+      g.fillStyle = 'rgba(255,255,255,0.35)'
+      g.fillRect(cx, cy + 3 * u, 4 * u, u)
+      text(
+        g,
+        `${c.label} ${c.n}`,
+        cx + 6 * u,
+        cy + 6 * u,
+        6 * u,
+        c.n > 0 ? '#fff3cf' : 'rgba(255,243,207,0.45)',
+      )
+      cx += widths[i]
+    }
+  })
+  return y + height
 }
 
 /** The next-step hint, plus a pointer to where to go. */
@@ -217,8 +263,13 @@ export function drawMinimap(
     const h = b.type === 'tower' ? 6 * u : b.type === 'ger' ? 4 * u : 3 * u
     g.fillRect(mx(b.x) - w / 2, by + bh - h, w, h)
   }
+  for (const camp of state.enemyCamps) {
+    if (!seen(camp.x)) continue
+    g.fillStyle = camp.cleared ? '#6d7796' : '#ff3a2a'
+    g.fillRect(mx(camp.x) - 2 * u, by + 2 * u, 4 * u, 3 * u)
+  }
   for (const e of state.enemies) {
-    if (!isAlive(e)) continue
+    if (!isAlive(e) || e.campId !== null) continue
     g.fillStyle = '#ff5a4a'
     g.fillRect(mx(e.x) - u, by + u, 2 * u, 4 * u)
   }
@@ -248,7 +299,7 @@ export function drawThreats(
   const count = { left: 0, right: 0 }
   const nearest = { left: Infinity, right: Infinity }
   for (const e of state.enemies) {
-    if (!isAlive(e)) continue
+    if (!isAlive(e) || e.campId !== null) continue
     const dx = e.x - o.camX
     if (Math.abs(dx) <= half + 10) continue
     const side = dx < 0 ? 'left' : 'right'

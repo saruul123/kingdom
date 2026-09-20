@@ -84,16 +84,45 @@ export class DamageSystem implements System, DamageApi {
     }
   }
 
-  damageAnimal(id: number, amount: number): void {
+  damageCamp(id: number, amount: number): void {
+    const { state, config, bus, sys, rng } = this.ctx
+    const camp = findById(state.enemyCamps, id)
+    if (!camp || camp.cleared) return
+    camp.health -= amount
+    bus.emit('sfx', { name: 'hit' })
+    if (camp.health > 0) return
+    camp.health = 0
+    camp.cleared = true
+    const [lo, hi] = config.content.enemyCamps.loot
+    const loot = rng.int(lo, hi)
+    sys.economy.dropCoins(camp.x, loot, 'dropped')
+    for (const e of state.enemies) {
+      if (e.campId !== id || !isAlive(e)) continue
+      e.campId = null
+      e.target = null
+      e.brain = 'Retreat'
+      e.state = 'Fleeing'
+    }
+    bus.emit('campDestroyed', { id, x: camp.x })
+    bus.emit('toast', { text: mn.campDestroyed(loot), kind: 'good' })
+    bus.emit('sfx', { name: 'build' })
+  }
+
+  /** `sourceId` -1 means the hero: a hero kill drops the reward on the spot. */
+  damageAnimal(id: number, amount: number, sourceId?: number | null): void {
     const a = findById(this.ctx.state.animals, id)
     if (!a || !isAlive(a)) return
     a.health -= amount
     if (a.health > 0) {
-      a.state = 'Fleeing'
+      if (a.type !== 'wolf') a.state = 'Fleeing'
       return
     }
     a.state = 'Dead'
     a.deadTimer = 30
+    if (sourceId === -1 && a.reward > 0) {
+      this.ctx.sys.economy.dropCoins(a.x, a.reward, 'dropped')
+      a.reward = 0
+    }
   }
 
   /** Hero takes no HP damage: enemies knock coins out of the purse, then the banner. */

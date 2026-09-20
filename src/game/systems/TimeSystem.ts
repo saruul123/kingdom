@@ -1,5 +1,5 @@
 import type { GameContext, System } from '../core/context'
-import { liveEnemies } from '../core/lookup'
+import { liveRaiders } from '../core/lookup'
 import type { Phase } from '../core/types'
 
 /** Day/night clock. Durations come from config.time (and must stay configurable). */
@@ -28,7 +28,7 @@ export class TimeSystem implements System {
       state.currentPhase === 'Night' &&
       config.time.nightEndsWhenCleared &&
       this.ctx.sys.waves.finishedSpawning() &&
-      liveEnemies(state).length === 0
+      liveRaiders(state).length === 0
     ) {
       state.timeRemaining = 0
     }

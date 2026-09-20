@@ -19,7 +19,11 @@
     "pickupRadius": 24,
     "hitCoinLoss": 2,
     "invulnerableTime": 1.2,
-    "knockback": 70
+    "knockback": 70,
+    "attackRange": 300,
+    "attackDamage": 7,
+    "attackCooldown": 0.55,
+    "arrowSpeed": 700
   },
   "recruitCost": 1,
   "recruitRadius": 46,
@@ -39,10 +43,35 @@
   },
   "economy": {
     "coinPickupDelay": 0.8,
-    "gerCoinDropSpread": 60
+    "gerCoinDropSpread": 60,
+    "tax": {
+      "base": 2,
+      "perCitizens": 2
+    }
   },
   "save": {
     "autosaveKey": "mdrl.autosave.v1",
     "exitKey": "mdrl.exit.v1"
+  },
+  "difficulty": {
+    "easy": {
+      "enemyHealth": 0.75,
+      "waveSize": 0.7,
+      "startCoins": 4
+    },
+    "normal": {
+      "enemyHealth": 1,
+      "waveSize": 1,
+      "startCoins": 0
+    },
+    "hard": {
+      "enemyHealth": 1.3,
+      "waveSize": 1.3,
+      "startCoins": -2
+    }
+  },
+  "ortoo": {
+    "speedBonus": 0.12,
+    "travelCost": 1
   }
 }

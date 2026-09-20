@@ -20,6 +20,9 @@ import { CombatSystem } from './systems/CombatSystem'
 import { ConstructionSystem } from './systems/ConstructionSystem'
 import { DamageSystem } from './systems/DamageSystem'
 import { EconomySystem } from './systems/EconomySystem'
+import { AchievementSystem } from './systems/AchievementSystem'
+import { EventSystem } from './systems/EventSystem'
+import { EnemyCampSystem } from './systems/EnemyCampSystem'
 import { EnemySystem } from './systems/EnemySystem'
 import { PlayerController } from './systems/PlayerController'
 import { ProfessionSystem } from './systems/ProfessionSystem'
@@ -36,6 +39,7 @@ export interface GameOptions {
   config?: GameConfig
   overrides?: DeepPartial<GameConfig>
   seed?: number
+  difficulty?: 'easy' | 'normal' | 'hard'
   /** Resume from a saved state instead of generating a new world. */
   state?: GameState
   input?: InputSource
@@ -64,7 +68,12 @@ export class GameManager {
     const config = opts.config ?? createConfig(opts.overrides)
     const isNew = !opts.state
     const state =
-      opts.state ?? newGameState(config, opts.seed ?? Date.now() & 0x7fffffff)
+      opts.state ??
+      newGameState(
+        config,
+        opts.seed ?? Date.now() & 0x7fffffff,
+        opts.difficulty ?? 'normal',
+      )
     const ctx: GameContext = {
       state,
       config,
@@ -83,10 +92,13 @@ export class GameManager {
     const territory = new TerritorySystem(ctx)
     const waves = new WaveSystem(ctx)
     const enemies = new EnemySystem(ctx)
+    const enemyCamps = new EnemyCampSystem(ctx)
     const citizens = new CitizenSystem(ctx)
     const recruitment = new RecruitmentSystem(ctx)
     const professions = new ProfessionSystem(ctx)
     const wildlife = new WildlifeSystem(ctx)
+    const achievements = new AchievementSystem(ctx)
+    const events = new EventSystem(ctx)
     const world = new WorldManager(ctx)
     const ai = new AISystem(ctx)
     const ui = new UIManager(ctx)
@@ -107,6 +119,7 @@ export class GameManager {
       recruitment,
       professions,
       buildings,
+      events,
     ]
     const player = new PlayerController(
       ctx,
@@ -126,6 +139,7 @@ export class GameManager {
       player,
       time,
       waves,
+      enemyCamps,
       ai,
       wildlife,
       combat,
@@ -135,6 +149,7 @@ export class GameManager {
       construction,
       territory,
       world,
+      achievements,
       ui,
     ]
 

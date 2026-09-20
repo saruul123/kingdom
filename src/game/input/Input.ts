@@ -3,6 +3,8 @@ export interface InputSource {
   left: boolean
   right: boolean
   sprint: boolean
+  /** Shoot key held (auto-repeats through the hero's cooldown). */
+  attack?: boolean
   /** True once per key press. */
   consumeInteract: () => boolean
 }
@@ -10,6 +12,7 @@ export interface InputSource {
 const LEFT = new Set(['ArrowLeft', 'a', 'A'])
 const RIGHT = new Set(['ArrowRight', 'd', 'D'])
 const INTERACT = new Set(['e', 'E', ' ', 'ArrowDown', 's', 'S'])
+const ATTACK = new Set(['f', 'F', 'j', 'J'])
 const PAUSE = new Set(['p', 'P', 'Escape'])
 const REPEAT_DELAY = 450
 const REPEAT_INTERVAL = 280
@@ -18,6 +21,8 @@ export class KeyboardInput implements InputSource {
   private keyLeft = false
   private keyRight = false
   private keySprint = false
+  private keyAttack = false
+  private touchAttack = false
   private touchLeft = false
   private touchRight = false
   private touchSprint = false
@@ -33,16 +38,20 @@ export class KeyboardInput implements InputSource {
   get right(): boolean {
     return this.keyRight || this.touchRight
   }
+  get attack(): boolean {
+    return this.keyAttack || this.touchAttack
+  }
   get sprint(): boolean {
     return this.keySprint || this.touchSprint
   }
 
   setTouchControl(
-    control: 'left' | 'right' | 'sprint',
+    control: 'left' | 'right' | 'sprint' | 'attack',
     pressed: boolean,
   ): void {
     if (control === 'left') this.touchLeft = pressed
     else if (control === 'right') this.touchRight = pressed
+    else if (control === 'attack') this.touchAttack = pressed
     else this.touchSprint = pressed
   }
 
@@ -57,7 +66,11 @@ export class KeyboardInput implements InputSource {
   }
 
   releaseTouchControls(): void {
-    this.touchLeft = this.touchRight = this.touchSprint = false
+    this.touchLeft =
+      this.touchRight =
+      this.touchSprint =
+      this.touchAttack =
+        false
   }
 
   constructor(private target: Window) {
@@ -86,6 +99,7 @@ export class KeyboardInput implements InputSource {
 
   private reset = () => {
     this.keyLeft = this.keyRight = this.keySprint = this.interact = false
+    this.keyAttack = false
     this.interactHeld = false
     this.releaseTouchControls()
   }
@@ -95,6 +109,7 @@ export class KeyboardInput implements InputSource {
     if (LEFT.has(e.key)) this.keyLeft = true
     else if (RIGHT.has(e.key)) this.keyRight = true
     else if (e.key === 'Shift') this.keySprint = true
+    else if (ATTACK.has(e.key)) this.keyAttack = true
     else if (INTERACT.has(e.key)) {
       if (!e.repeat) this.pressInteract()
     } else if (PAUSE.has(e.key)) {
@@ -107,6 +122,7 @@ export class KeyboardInput implements InputSource {
     if (LEFT.has(e.key)) this.keyLeft = false
     else if (RIGHT.has(e.key)) this.keyRight = false
     else if (e.key === 'Shift') this.keySprint = false
+    else if (ATTACK.has(e.key)) this.keyAttack = false
     else if (INTERACT.has(e.key)) this.releaseInteract()
   }
 }
@@ -115,6 +131,7 @@ export class NullInput implements InputSource {
   left = false
   right = false
   sprint = false
+  attack = false
   private interact = false
   press(): void {
     this.interact = true

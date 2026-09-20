@@ -17,6 +17,8 @@ import {
   drawBuildSite,
   drawCoin,
   drawFlame,
+  drawHorseRaider,
+  drawSiegeRam,
   drawGer,
   drawGroundDisc,
   drawRoleBadge,
@@ -24,6 +26,15 @@ import {
   drawLevelPips,
   drawHero,
   drawOvoo,
+  drawEnemyCamp,
+  drawGate,
+  drawOutpost,
+  drawMarket,
+  drawOrtoo,
+  drawPasture,
+  drawRuins,
+  drawWell,
+  drawStable,
   drawPerson,
   drawStand,
   drawStandMarker,
@@ -32,6 +43,9 @@ import {
   drawWall,
 } from './sprites'
 import type { Assets, PersonKind } from './sprites'
+
+type BuildSiteType =
+  'wall' | 'tower' | 'gate' | 'pasture' | 'stable' | 'outpost'
 
 /** Ground line as a fraction of the (low-resolution) buffer height. */
 const GROUND_FRACTION = 0.74
@@ -225,18 +239,26 @@ export class Renderer {
         g,
         c.x,
         c.owner === 'neutral' ? '#f2f2f2' : '#4fd68a',
-        13,
+        c.profession === 'Horseman' ? 18 : 13,
         c.owner === 'neutral' ? 0.4 : 0.5,
       )
     }
     for (const e of state.enemies) {
       if (e.state === 'Dead' || e.x < left - 30 || e.x > right + 30) continue
-      drawGroundDisc(g, e.x, '#ff4a3a', 13, 0.6)
+      drawGroundDisc(
+        g,
+        e.x,
+        '#ff4a3a',
+        e.type === 'siege' ? 24 : e.type === 'horse_raider' ? 18 : 13,
+        0.6,
+      )
     }
     drawGroundDisc(g, state.hero.x, '#ffd24a', 28, 0.4)
-    for (const point of config.content.buildPoints) {
+    for (const point of [
+      ...config.content.buildPoints,
+      ...state.extraBuildPoints,
+    ]) {
       if (point.x < left - 30 || point.x > right + 30) continue
-      if (point.building !== 'wall' && point.building !== 'tower') continue
       if (state.buildings.some((b) => b.buildPointId === point.id)) continue
       if (point.requires) {
         const prerequisite = state.buildings.find(
@@ -244,7 +266,18 @@ export class Renderer {
         )
         if (!prerequisite || !isBuildingStanding(prerequisite)) continue
       }
-      drawBuildSite(g, point.x, point.building, this.t)
+      drawBuildSite(g, point.x, point.building as BuildSiteType, this.t)
+    }
+
+    // a cleared camp is a place to build an outpost
+    for (const camp of state.enemyCamps) {
+      if (
+        camp.cleared &&
+        camp.x > left - 30 &&
+        camp.x < right + 30 &&
+        !state.buildings.some((b) => b.buildPointId === `camp:${camp.id}`)
+      )
+        drawBuildSite(g, camp.x, 'outpost', this.t)
     }
 
     for (const stand of config.content.stands)
@@ -338,8 +371,32 @@ export class Renderer {
       }
     }
     for (const o of state.ovoos) if (vis(o.x)) drawOvoo(g, o.x, t)
+    for (const w of state.wells)
+      if (vis(w.x)) drawWell(g, w.x, w.usedDay === state.currentDay)
+    for (const r of state.ruins) if (vis(r.x)) drawRuins(g, r.x, r.looted)
 
     const dark = game.time.daylight() < 0.55
+    for (const camp of state.enemyCamps) {
+      if (!vis(camp.x, 120)) continue
+      drawEnemyCamp(
+        g,
+        camp.x,
+        camp.health < camp.maxHealth && !camp.cleared && this.t % 0.3 < 0.1,
+        camp.cleared,
+      )
+      if (!camp.cleared) {
+        lights.push({
+          x: camp.x,
+          y: -8,
+          r: 50,
+          colour: 'rgba(255,120,60,A)',
+          strength: 0.5,
+          flameY: -6,
+        })
+        if (camp.health < camp.maxHealth)
+          drawBar(g, camp.x, -64, camp.health / camp.maxHealth, '#e5533d', 34)
+      }
+    }
     for (const c of state.camps) {
       if (!vis(c.x, 120)) continue
       drawGer(g, c.x - 18, 32, 17, 24, false, dark, t)
@@ -358,7 +415,17 @@ export class Renderer {
       })
     }
 
-    const order = { ger: 0, wall: 1, tower: 2 } as const
+    const order = {
+      ger: 0,
+      pasture: 1,
+      stable: 1,
+      market: 1,
+      ortoo: 1,
+      outpost: 1,
+      wall: 2,
+      gate: 2,
+      tower: 3,
+    } as const
     const buildings = [...state.buildings].sort(
       (a, b) => order[a.type] - order[b.type],
     )
@@ -380,6 +447,18 @@ export class Renderer {
           colour: 'rgba(255,175,90,A)',
           strength: 0.75,
         })
+      } else if (b.type === 'market') {
+        drawMarket(g, b.x, progress, hurt, t)
+      } else if (b.type === 'ortoo') {
+        drawOrtoo(g, b.x, progress, hurt, t)
+      } else if (b.type === 'stable') {
+        drawStable(g, b.x, progress, hurt, t)
+      } else if (b.type === 'outpost') {
+        drawOutpost(g, b.x, progress, hurt, t)
+      } else if (b.type === 'pasture') {
+        drawPasture(g, b.x, progress, dmg, hurt, t, b.occupants.length)
+      } else if (b.type === 'gate') {
+        drawGate(g, b.x, def.height, progress, dmg, hurt)
       } else if (b.type === 'wall') {
         drawWall(g, b.x, def.height, progress, dmg, hurt, b.level)
         if (!building) {
@@ -463,19 +542,35 @@ export class Renderer {
       h.facing,
       this.heroStride,
       Math.abs(h.vx) / config.hero.sprintSpeed,
+      h.attackFlash,
     )
     g.restore()
 
     for (const p of state.projectiles) {
       const u = clamp(p.travelled / p.totalDist, 0, 1)
       const arc = 4 * p.totalDist * 0.1 * u * (1 - u)
-      drawArrow(g, p.x, -p.y - arc, p.lastX - p.x, -(p.lastY - p.y))
+      drawArrow(g, p.x, -p.y - arc, p.lastX - p.x, -(p.lastY - p.y), p.hostile)
     }
   }
 
   private citizen(g: G, c: Citizen): void {
     const { game, t } = this
     const dead = c.state === 'Dead'
+    if (c.owner === 'player' && c.profession === 'Horseman') {
+      drawHorseRaider(
+        g,
+        c.x,
+        c.facing,
+        t + c.id,
+        c.state === 'Moving' || c.brain === 'Charge',
+        false,
+        dead,
+        dead ? clamp(c.deadTimer / 1.5, 0, 1) : undefined,
+        true,
+      )
+      if (!dead) drawRoleBadge(g, c.x, -74, 'horseman')
+      return
+    }
     const kind: PersonKind =
       c.owner === 'neutral'
         ? 'neutral'
@@ -483,7 +578,11 @@ export class Renderer {
           ? 'archer'
           : c.profession === 'Builder'
             ? 'builder'
-            : 'citizen'
+            : c.profession === 'Herder'
+              ? 'herder'
+              : c.profession === 'Trader'
+                ? 'trader'
+                : 'citizen'
     let y = 0
     if (
       c.postBuildingId !== null &&
@@ -511,32 +610,51 @@ export class Renderer {
       carrying: c.carrying > 0 && !dead,
     })
     // Workers on the ground carry a job badge; archers already stand out on towers.
-    if (!dead && y === 0 && (kind === 'archer' || kind === 'builder'))
+    if (
+      !dead &&
+      y === 0 &&
+      (kind === 'archer' ||
+        kind === 'builder' ||
+        kind === 'herder' ||
+        kind === 'trader')
+    )
       drawRoleBadge(g, c.x, -PERSON_HEIGHT - 12, kind)
   }
 
   private enemy(g: G, e: Enemy): void {
     const { t } = this
     const dead = e.state === 'Dead'
-    drawPerson(g, e.x, 0, e.facing, {
-      kind: 'bandit',
-      t: t + e.id,
-      moving: e.state === 'Moving' || e.state === 'Fleeing',
-      hurt: e.hitFlash > 0,
-      dead,
-      fade: dead ? clamp(e.deadTimer / 1.5, 0, 1) : undefined,
-    })
+    const moving = e.state === 'Moving' || e.state === 'Fleeing'
+    const fade = dead ? clamp(e.deadTimer / 1.5, 0, 1) : undefined
+    const hurt = e.hitFlash > 0
+    let top = PERSON_HEIGHT
+    if (e.type === 'horse_raider') {
+      drawHorseRaider(g, e.x, e.facing, t + e.id, moving, hurt, dead, fade)
+      top = 60
+    } else if (e.type === 'siege') {
+      drawSiegeRam(g, e.x, e.facing, t + e.id, moving, hurt, dead, fade)
+      top = 46
+    } else {
+      drawPerson(g, e.x, 0, e.facing, {
+        kind:
+          e.type === 'archer_raider'
+            ? 'raiderArcher'
+            : e.type === 'heavy'
+              ? 'heavy'
+              : 'bandit',
+        t: t + e.id,
+        moving,
+        action:
+          e.brain === 'Attack' && e.type === 'archer_raider' ? 'shoot' : null,
+        hurt,
+        dead,
+        fade,
+      })
+    }
     if (dead) return
     if (e.carryingBanner) drawBanner(g, e.x - e.facing * 10, -10, t, 40)
     if (e.health < e.maxHealth)
-      drawBar(
-        g,
-        e.x,
-        -PERSON_HEIGHT - 12,
-        e.health / e.maxHealth,
-        '#e5533d',
-        22,
-      )
+      drawBar(g, e.x, -top - 12, e.health / e.maxHealth, '#e5533d', 22)
   }
 
   // ------------------------------------------------------------- lighting

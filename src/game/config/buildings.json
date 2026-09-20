@@ -9,7 +9,27 @@
     "height": 86,
     "blocksEnemies": false,
     "archerCapacity": 0,
-    "upgrades": []
+    "upgrades": [
+      {
+        "label": "Том гэр",
+        "cost": 15,
+        "buildWork": 12,
+        "maxHealth": 520
+      },
+      {
+        "label": "Хааны буудал",
+        "cost": 30,
+        "buildWork": 16,
+        "maxHealth": 700
+      },
+      {
+        "label": "Ордон",
+        "cost": 55,
+        "buildWork": 22,
+        "maxHealth": 950
+      }
+    ],
+    "herderCapacity": 0
   },
   "wall": {
     "label": "Модон хашаа",
@@ -27,8 +47,16 @@
         "cost": 6,
         "buildWork": 8,
         "maxHealth": 280
+      },
+      {
+        "label": "Чулуун хана",
+        "cost": 14,
+        "buildWork": 14,
+        "maxHealth": 600,
+        "minKingdomLevel": 3
       }
-    ]
+    ],
+    "herderCapacity": 0
   },
   "tower": {
     "label": "Харвах цамхаг",
@@ -48,7 +76,101 @@
         "maxHealth": 320,
         "archerCapacity": 3,
         "rangeBonus": 70
+      },
+      {
+        "label": "Хүчирхэг цамхаг",
+        "cost": 18,
+        "buildWork": 16,
+        "maxHealth": 520,
+        "archerCapacity": 4,
+        "rangeBonus": 60,
+        "minKingdomLevel": 3
       }
-    ]
+    ],
+    "herderCapacity": 0
+  },
+  "pasture": {
+    "label": "Бэлчээр",
+    "category": "economy",
+    "cost": 6,
+    "buildWork": 8,
+    "maxHealth": 90,
+    "width": 56,
+    "height": 30,
+    "blocksEnemies": false,
+    "archerCapacity": 0,
+    "herderCapacity": 2,
+    "upgrades": []
+  },
+  "outpost": {
+    "label": "Застав",
+    "category": "economy",
+    "cost": 12,
+    "buildWork": 14,
+    "maxHealth": 220,
+    "width": 40,
+    "height": 64,
+    "blocksEnemies": false,
+    "archerCapacity": 0,
+    "herderCapacity": 0,
+    "upgrades": []
+  },
+  "gate": {
+    "label": "Хаалга",
+    "category": "gate",
+    "cost": 8,
+    "buildWork": 10,
+    "maxHealth": 320,
+    "width": 22,
+    "height": 60,
+    "blocksEnemies": true,
+    "archerCapacity": 0,
+    "herderCapacity": 0,
+    "minKingdomLevel": 2,
+    "upgrades": []
+  },
+  "stable": {
+    "label": "Морины байр",
+    "category": "economy",
+    "cost": 10,
+    "buildWork": 10,
+    "maxHealth": 160,
+    "width": 44,
+    "height": 40,
+    "blocksEnemies": false,
+    "archerCapacity": 0,
+    "herderCapacity": 0,
+    "horsemanCapacity": 2,
+    "minKingdomLevel": 2,
+    "upgrades": []
+  },
+  "market": {
+    "label": "Зах",
+    "category": "economy",
+    "cost": 12,
+    "buildWork": 12,
+    "maxHealth": 150,
+    "width": 50,
+    "height": 40,
+    "blocksEnemies": false,
+    "archerCapacity": 0,
+    "herderCapacity": 0,
+    "traderCapacity": 2,
+    "minKingdomLevel": 2,
+    "upgrades": []
+  },
+  "ortoo": {
+    "label": "Өртөө",
+    "category": "economy",
+    "cost": 14,
+    "buildWork": 12,
+    "maxHealth": 140,
+    "width": 36,
+    "height": 44,
+    "blocksEnemies": false,
+    "archerCapacity": 0,
+    "herderCapacity": 0,
+    "minKingdomLevel": 3,
+    "upgrades": []
   }
 }

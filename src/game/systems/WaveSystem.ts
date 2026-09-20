@@ -19,6 +19,7 @@ export class WaveSystem implements System, WaveApi {
         this.ctx.state.wave.elapsed = 0
       } else if (phase === 'Sunrise') this.reset()
     })
+    ctx.bus.on('nightCleared', () => this.rewardBossNight())
   }
 
   finishedSpawning(): boolean {
@@ -34,7 +35,7 @@ export class WaveSystem implements System, WaveApi {
       else right++
     }
     for (const e of state.enemies) {
-      if (e.state === 'Dead') continue
+      if (e.state === 'Dead' || e.campId !== null) continue
       if (e.side < 0) left++
       else right++
     }
@@ -52,30 +53,60 @@ export class WaveSystem implements System, WaveApi {
     }
   }
 
+  /** Surviving the great raid pays a chest at the ger and schedules the next one. */
+  private rewardBossNight(): void {
+    const { state, config, sys, bus } = this.ctx
+    if (!state.bossNight.active) return
+    state.bossNight.active = false
+    state.bossNight.nextNight += config.waves.bossInterval
+    const reward = config.waves.boss.reward
+    sys.economy.dropCoins(sys.buildings.ger()?.x ?? 0, reward, 'income')
+    bus.emit('toast', { text: mn.bossDefeated(reward), kind: 'good' })
+  }
+
   private reset(): void {
     this.ctx.state.wave = { night: 0, elapsed: 0, queue: [], total: 0 }
   }
 
   private planNight(night: number): void {
-    const { config, rng, state } = this.ctx
+    const { config, rng, state, bus } = this.ctx
+    const diff = config.difficulty[state.difficulty]
     const tier = config.waves.nights.find(
       (t) => night >= t.from && night <= t.to,
     )
+    const boss = night % config.waves.bossInterval === 0
+    state.bossNight.active = boss
+    const window = config.time.spawnWindow * config.time.nightDuration
     const entries: SpawnEntry[] = []
-    if (tier) {
-      const window = config.time.spawnWindow * config.time.nightDuration
-      for (const group of tier.groups) {
-        const count = group.base + group.perNight * (night - tier.from)
-        let side: Side = rng.sign()
-        for (let i = 0; i < count; i++) {
-          entries.push({
-            type: group.type,
-            side,
-            at: (i / Math.max(1, count)) * window + rng.range(0, 2),
-          })
-          side = (side * -1) as Side
-        }
+    const add = (type: string, count: number, x?: number) => {
+      let side: Side = rng.sign()
+      for (let i = 0; i < count; i++) {
+        entries.push({
+          type,
+          side: x === undefined ? side : x < 0 ? -1 : 1,
+          x,
+          at: (i / Math.max(1, count)) * window + rng.range(0, 3),
+        })
+        side = (side * -1) as Side
       }
+    }
+    if (tier) {
+      const scale = (boss ? config.waves.boss.multiplier : 1) * diff.waveSize
+      for (const group of tier.groups) {
+        const raw = group.base + group.perNight * (night - tier.from)
+        add(group.type, Math.max(1, Math.round(Math.floor(raw) * scale)))
+      }
+    }
+    if (boss) {
+      for (const g of config.waves.boss.extra) {
+        add(g.type, Math.max(1, Math.round(g.base * diff.waveSize)))
+      }
+      bus.emit('toast', { text: mn.bossWarning, kind: 'danger' })
+    }
+    // every standing camp sends raiders from its own doorstep
+    for (const camp of state.enemyCamps) {
+      if (!camp.cleared)
+        add('bandit', config.content.enemyCamps.raidersPerNight, camp.x)
     }
     entries.sort((a, b) => a.at - b.at)
     state.wave = { night, elapsed: 0, queue: entries, total: entries.length }

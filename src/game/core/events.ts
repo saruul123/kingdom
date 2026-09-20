@@ -23,11 +23,14 @@ export interface GameEvents {
   professionAssigned: { id: number; profession: string }
   buildingOrdered: { id: number; type: string }
   buildingCompleted: { id: number; type: string }
+  eraChanged: { era: number }
   buildingUpgraded: { id: number; type: string; level: number }
   /** Short text that floats up from a world position ("+2", "-4"…). */
   float: { x: number; text: string; kind: 'gain' | 'spend' | 'loss' | 'info' }
   buildingDestroyed: { id: number; type: string; x: number }
   enemySpawned: { id: number; side: Side }
+  campDestroyed: { id: number; x: number }
+  territoryExpanded: { x: number; radius: number }
   enemyKilled: { id: number; x: number }
   heroHit: { coinsLost: number }
   bannerLost: { x: number }

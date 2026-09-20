@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createConfig } from './config'
 import { GameManager } from './GameManager'
 import { mn } from './i18n'
+import { ACHIEVEMENTS } from './systems/AchievementSystem'
+import type { Difficulty } from './config'
 import { KeyboardInput } from './input/Input'
 import { loadAssets } from './render/assets'
 import { Renderer } from './render/Renderer'
@@ -36,6 +38,8 @@ const params = () =>
     : new URLSearchParams(window.location.search)
 
 const MUTE_KEY = 'mdrl.muted'
+const DIFFICULTY_KEY = 'mdrl.difficulty'
+const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard']
 
 const btn =
   'cursor-pointer rounded-sm border-2 px-6 py-2.5 font-display text-base font-bold tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
@@ -52,6 +56,8 @@ export function GameShell() {
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
   const mutedRef = useRef(false)
+  const difficultyRef = useRef<Difficulty>('normal')
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal')
   const [hasSave, setHasSave] = useState(false)
   const [hasAutosave, setHasAutosave] = useState(false)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -95,10 +101,12 @@ export function GameShell() {
         state: state ?? undefined,
         seed,
         input,
+        difficulty: difficultyRef.current,
         persist: mode !== 'demo',
       })
       const audio = new AudioManager(game.bus)
       audio.muted = mode === 'demo' || mutedRef.current
+      if (mode !== 'demo') audio.startMusic()
       const debug = q.has('debug')
       const speed = debug && q.get('speed') ? Number(q.get('speed')) : 1
       const renderer = new Renderer(canvas, game, assets, { debug })
@@ -192,6 +200,11 @@ export function GameShell() {
       const saved = localStorage.getItem(MUTE_KEY) === '1'
       mutedRef.current = saved
       setMuted(saved)
+      const d = localStorage.getItem(DIFFICULTY_KEY) as Difficulty | null
+      if (d && DIFFICULTIES.includes(d)) {
+        difficultyRef.current = d
+        setDifficulty(d)
+      }
     } catch {
       // ignore
     }
@@ -247,7 +260,10 @@ export function GameShell() {
     setPaused(false)
   }
 
-  const hold = (control: 'left' | 'right' | 'sprint', pressed: boolean) => {
+  const hold = (
+    control: 'left' | 'right' | 'sprint' | 'attack',
+    pressed: boolean,
+  ) => {
     runtime.current?.input.setTouchControl(control, pressed)
   }
 
@@ -301,31 +317,44 @@ export function GameShell() {
                   <kbd>E</kbd>
                   <span>{mn.controlsShort.act}</span>
                 </div>
+                <div className="control-tile">
+                  <span className="control-symbol">➶</span>
+                  <kbd>F</kbd>
+                  <span>{mn.controlsShort.shoot}</span>
+                </div>
               </div>
               <div className="touch-dock" aria-label="Дэлгэцийн удирдлага">
-                {(['left', 'right', 'sprint'] as const).map((control) => (
-                  <button
-                    key={control}
-                    className="touch-button"
-                    aria-label={
-                      control === 'left'
-                        ? 'Зүүн тийш'
+                {(['left', 'right', 'sprint', 'attack'] as const).map(
+                  (control) => (
+                    <button
+                      key={control}
+                      className="touch-button"
+                      aria-label={
+                        control === 'left'
+                          ? 'Зүүн тийш'
+                          : control === 'right'
+                            ? 'Баруун тийш'
+                            : control === 'attack'
+                              ? 'Буудах'
+                              : 'Хурдлах'
+                      }
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.setPointerCapture(e.pointerId)
+                        hold(control, true)
+                      }}
+                      onPointerUp={() => hold(control, false)}
+                      onPointerCancel={() => hold(control, false)}
+                      onLostPointerCapture={() => hold(control, false)}
+                    >
+                      {control === 'left'
+                        ? '←'
                         : control === 'right'
-                          ? 'Баруун тийш'
-                          : 'Хурдлах'
-                    }
-                    onPointerDown={(e) => {
-                      e.preventDefault()
-                      e.currentTarget.setPointerCapture(e.pointerId)
-                      hold(control, true)
-                    }}
-                    onPointerUp={() => hold(control, false)}
-                    onPointerCancel={() => hold(control, false)}
-                    onLostPointerCapture={() => hold(control, false)}
-                  >
-                    {control === 'left' ? '←' : control === 'right' ? '→' : '»'}
-                  </button>
-                ))}
+                          ? '→'
+                          : '»'}
+                    </button>
+                  ),
+                )}
                 <button
                   className="touch-button touch-action"
                   aria-label="Үйлдэл"
@@ -368,6 +397,30 @@ export function GameShell() {
             <p className="menu-kicker">{mn.menu.kicker}</p>
             <h1 className="menu-title">{mn.title}</h1>
             <p className="menu-blurb">{mn.menu.blurb}</p>
+            <div
+              className="menu-actions"
+              role="group"
+              aria-label={mn.difficulty.label}
+            >
+              {DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  className={d === difficulty ? btnPrimary : btnGhost}
+                  aria-pressed={d === difficulty}
+                  onClick={() => {
+                    difficultyRef.current = d
+                    setDifficulty(d)
+                    try {
+                      localStorage.setItem(DIFFICULTY_KEY, d)
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                >
+                  {mn.difficulty[d]}
+                </button>
+              ))}
+            </div>
             <div className="menu-actions">
               <button
                 className={btnPrimary}
@@ -410,6 +463,27 @@ export function GameShell() {
           <h2 className="m-0 font-display text-4xl font-extrabold text-amber-100">
             {mn.pause.title}
           </h2>
+          <div className="mt-4 max-w-md text-sm text-amber-100/80">
+            <p className="m-0 mb-1 font-bold text-amber-200">
+              {mn.achievementsTitle}{' '}
+              {runtime.current?.game.state.achievements.length ?? 0}/
+              {ACHIEVEMENTS.length}
+            </p>
+            <p className="m-0 flex flex-wrap justify-center gap-x-3 gap-y-1">
+              {ACHIEVEMENTS.map((a) => {
+                const earned =
+                  runtime.current?.game.state.achievements.includes(a.id)
+                return (
+                  <span
+                    key={a.id}
+                    className={earned ? 'text-amber-300' : 'text-amber-100/35'}
+                  >
+                    {earned ? '★' : '☆'} {mn.achievements[a.id]}
+                  </span>
+                )
+              })}
+            </p>
+          </div>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button className={btnPrimary} onClick={resume}>
               {mn.pause.resume}

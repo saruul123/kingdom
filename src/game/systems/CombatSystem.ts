@@ -25,6 +25,8 @@ export class CombatSystem implements System, CombatApi {
       totalDist: Math.max(1, dist),
       lastX: tx,
       lastY: ty,
+      hostile: args.hostile ?? false,
+      fromHero: args.fromHero ?? false,
     })
     bus.emit('sfx', { name: 'arrow' })
   }
@@ -42,10 +44,22 @@ export class CombatSystem implements System, CombatApi {
       if (dist <= step) {
         state.projectiles.splice(i, 1)
         if (!target) continue
-        if (target.kind === 'enemy')
+        if (p.hostile) {
+          if (target.kind === 'building')
+            sys.damage.damageBuilding(p.target.id, p.damage)
+          else if (target.kind === 'citizen')
+            sys.damage.damageCitizen(p.target.id, p.damage)
+          else if (target.kind === 'hero') sys.damage.hitHero(p.x, p.damage)
+        } else if (target.kind === 'camp')
+          sys.damage.damageCamp(p.target.id, p.damage)
+        else if (target.kind === 'enemy')
           sys.damage.damageEnemy(p.target.id, p.damage, p.sourceId)
         else if (target.kind === 'animal')
-          sys.damage.damageAnimal(p.target.id, p.damage, p.sourceId)
+          sys.damage.damageAnimal(
+            p.target.id,
+            p.damage,
+            p.fromHero ? -1 : p.sourceId,
+          )
         continue
       }
       p.x += (dx / dist) * step
@@ -64,6 +78,10 @@ export class CombatSystem implements System, CombatApi {
         return [t.entity.x, 24]
       case 'building':
         return [t.entity.x, 26]
+      case 'camp':
+        return [t.entity.x, 26]
+      case 'hero':
+        return [this.ctx.state.hero.x, 34]
       default:
         return [0, 0]
     }

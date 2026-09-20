@@ -4,17 +4,117 @@
     {
       "from": 1,
       "to": 3,
-      "groups": [{ "type": "bandit", "base": 2, "perNight": 1 }]
+      "groups": [
+        {
+          "type": "bandit",
+          "base": 2,
+          "perNight": 1
+        }
+      ]
     },
     {
       "from": 4,
       "to": 7,
-      "groups": [{ "type": "bandit", "base": 5, "perNight": 1 }]
+      "groups": [
+        {
+          "type": "bandit",
+          "base": 4,
+          "perNight": 1
+        },
+        {
+          "type": "archer_raider",
+          "base": 1,
+          "perNight": 0.5
+        },
+        {
+          "type": "horse_raider",
+          "base": 1,
+          "perNight": 0.5
+        }
+      ]
     },
     {
       "from": 8,
+      "to": 12,
+      "groups": [
+        {
+          "type": "bandit",
+          "base": 6,
+          "perNight": 1
+        },
+        {
+          "type": "archer_raider",
+          "base": 2,
+          "perNight": 0.5
+        },
+        {
+          "type": "horse_raider",
+          "base": 2,
+          "perNight": 0.5
+        },
+        {
+          "type": "heavy",
+          "base": 1,
+          "perNight": 0.5
+        }
+      ]
+    },
+    {
+      "from": 13,
       "to": 9999,
-      "groups": [{ "type": "bandit", "base": 8, "perNight": 1 }]
+      "groups": [
+        {
+          "type": "bandit",
+          "base": 8,
+          "perNight": 1
+        },
+        {
+          "type": "archer_raider",
+          "base": 3,
+          "perNight": 0.5
+        },
+        {
+          "type": "horse_raider",
+          "base": 3,
+          "perNight": 0.5
+        },
+        {
+          "type": "heavy",
+          "base": 2,
+          "perNight": 0.5
+        },
+        {
+          "type": "siege",
+          "base": 1,
+          "perNight": 0.34
+        }
+      ]
     }
-  ]
+  ],
+  "boss": {
+    "multiplier": 1.5,
+    "reward": 12,
+    "extra": [
+      {
+        "type": "heavy",
+        "base": 2,
+        "perNight": 0
+      },
+      {
+        "type": "archer_raider",
+        "base": 3,
+        "perNight": 0
+      },
+      {
+        "type": "horse_raider",
+        "base": 3,
+        "perNight": 0
+      },
+      {
+        "type": "siege",
+        "base": 1,
+        "perNight": 0
+      }
+    ]
+  }
 }

@@ -22,6 +22,7 @@ export class PlayerController implements System {
 
   update(dt: number): void {
     this.move(dt)
+    this.combat(dt)
     this.explore()
     this.pickupBanner(dt)
     this.updateInteraction()
@@ -43,7 +44,15 @@ export class PlayerController implements System {
       if (h.exhausted && h.stamina >= c.staminaRecoverAt) h.exhausted = false
     }
 
-    const top = h.sprinting ? c.sprintSpeed : c.speed
+    const stations = state.buildings.filter(
+      (b) =>
+        b.type === 'ortoo' && (b.state === 'Active' || b.state === 'Damaged'),
+    ).length
+    const top =
+      (h.sprinting ? c.sprintSpeed : c.speed) *
+      (h.boost > 0 ? 1.25 : 1) *
+      (1 + config.ortoo.speedBonus * Math.min(2, stations))
+    h.boost = Math.max(0, h.boost - dt)
     // A mount coasts into a stop, but should not keep sliding after release.
     const acceleration = dir === 0 ? c.acceleration * 1.35 : c.acceleration
     h.vx = approach(h.vx, dir * top, acceleration * dt)
@@ -55,6 +64,54 @@ export class PlayerController implements System {
       h.vx = 0
     // Wait until the horse has actually turned before mirroring the artwork.
     if (Math.abs(h.vx) > 8) h.facing = h.vx > 0 ? 1 : -1
+  }
+
+  /** Hold the shoot key to loose arrows at the nearest raider (or game) in range. */
+  private combat(dt: number): void {
+    const { state, config, sys } = this.ctx
+    const h = state.hero
+    h.attackCooldown = Math.max(0, h.attackCooldown - dt)
+    h.attackFlash = Math.max(0, h.attackFlash - dt)
+    if (!this.input.attack || h.attackCooldown > 0) return
+    const c = config.hero
+    let best:
+      { kind: 'enemy' | 'animal' | 'camp'; id: number; x: number } | undefined
+    let bestScore = Infinity
+    const consider = (
+      kind: 'enemy' | 'animal' | 'camp',
+      id: number,
+      x: number,
+      bias: number,
+    ) => {
+      const d = Math.abs(x - h.x)
+      if (d > c.attackRange) return
+      // prefer what the hero is facing, and raiders over game
+      const behind = (x - h.x) * h.facing < 0 ? 140 : 0
+      const score = d + behind + bias
+      if (score < bestScore) {
+        bestScore = score
+        best = { kind, id, x }
+      }
+    }
+    for (const e of state.enemies)
+      if (e.state !== 'Dead') consider('enemy', e.id, e.x, 0)
+    for (const a of state.animals)
+      if (a.state !== 'Dead') consider('animal', a.id, a.x, 80)
+    for (const camp of state.enemyCamps)
+      if (!camp.cleared) consider('camp', camp.id, camp.x, 40)
+    if (!best) return
+    h.facing = best.x >= h.x ? 1 : -1
+    h.attackCooldown = c.attackCooldown
+    h.attackFlash = 0.28
+    sys.combat.fireArrow({
+      x: h.x + h.facing * 20,
+      y: 44,
+      target: { kind: best.kind, id: best.id },
+      damage: c.attackDamage,
+      speed: c.arrowSpeed,
+      sourceId: null,
+      fromHero: true,
+    })
   }
 
   /** Reveal the steppe around the hero on the map. */

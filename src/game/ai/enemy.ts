@@ -1,5 +1,10 @@
 import type { GameContext } from '../core/context'
-import { isAlive, isBuildingStanding, resolveTarget } from '../core/lookup'
+import {
+  findById,
+  isAlive,
+  isBuildingStanding,
+  resolveTarget,
+} from '../core/lookup'
 import type { Resolved } from '../core/lookup'
 import type { Building, Enemy, Side, TargetRef } from '../core/types'
 import { go } from './stateMachine'
@@ -9,6 +14,8 @@ import { sideOf } from '../core/math'
 import { mn } from '../i18n'
 
 const RETARGET_INTERVAL = 0.6
+/** How far from its camp a guard will follow the hero. */
+const GUARD_LEASH = 380
 
 function def(e: Enemy, ctx: GameContext) {
   return ctx.config.enemies[e.type]
@@ -47,7 +54,7 @@ function blockerBetween(
   ctx: GameContext,
   exceptId: number | null,
 ): Building | undefined {
-  if (e.carryingBanner) return undefined
+  if (e.carryingBanner || def(e, ctx).ranged) return undefined
   const lo = Math.min(e.x, x)
   const hi = Math.max(e.x, x)
   const walls = ctx.sys.buildings
@@ -60,6 +67,18 @@ function blockerBetween(
 export function chooseTarget(e: Enemy, ctx: GameContext): TargetRef | null {
   const { state, config } = ctx
   const d = def(e, ctx)
+
+  // Camp guards only ever chase a hero who wanders into their territory.
+  if (e.campId !== null) {
+    const camp = findById(state.enemyCamps, e.campId)
+    const near =
+      camp &&
+      !camp.cleared &&
+      Math.abs(state.hero.x - camp.x) < GUARD_LEASH &&
+      Math.abs(state.hero.x - e.x) <= d.heroAggroRange + 80 &&
+      state.banner.state !== 'carried'
+    return near ? { kind: 'hero', id: 0 } : null
+  }
 
   let ref: TargetRef | null = null
   let refX = 0
@@ -88,7 +107,8 @@ export function chooseTarget(e: Enemy, ctx: GameContext): TargetRef | null {
         (c) =>
           c.owner === 'player' &&
           isAlive(c) &&
-          (cat === 'defender') === (c.profession === 'Archer') &&
+          (cat === 'defender') ===
+            (c.profession === 'Archer' || c.profession === 'Horseman') &&
           ahead(e, c.x, ctx),
       )
       const c = nearestBy(list, e.x, (u) => u.x)
@@ -126,6 +146,7 @@ function edgeDistance(e: Enemy, t: Resolved, ctx: GameContext): number {
     case 'citizen':
     case 'enemy':
     case 'animal':
+    case 'camp':
       return Math.abs(t.entity.x - e.x)
     case 'hero':
       return Math.abs(ctx.state.hero.x - e.x)
@@ -167,7 +188,10 @@ function applyHit(e: Enemy, ctx: GameContext, t: Resolved): void {
   const damage = e.damage
   switch (t.kind) {
     case 'building':
-      ctx.sys.damage.damageBuilding(t.entity.id, damage)
+      ctx.sys.damage.damageBuilding(
+        t.entity.id,
+        damage * (def(e, ctx).structureDamageMultiplier ?? 1),
+      )
       break
     case 'citizen':
       ctx.sys.damage.damageCitizen(t.entity.id, damage)
@@ -200,6 +224,7 @@ export const enemyNodes: Nodes<Enemy> = {
     e.target = chooseTarget(e, ctx)
     e.retargetIn = RETARGET_INTERVAL
     if (!e.target) {
+      if (e.campId !== null) return go(e, 'Guard', 'Idle')
       // Nothing left to attack: hold position; the night will end on its own.
       e.state = 'Idle'
       return
@@ -253,7 +278,42 @@ export const enemyNodes: Nodes<Enemy> = {
     }
     if (e.cooldown > 0) return
     e.cooldown = def(e, ctx).attackCooldown
+    const d = def(e, ctx)
+    if (d.ranged && e.target) {
+      ctx.sys.combat.fireArrow({
+        x: e.x,
+        y: 26,
+        target: e.target,
+        damage: e.damage,
+        speed: d.projectileSpeed ?? 400,
+        sourceId: e.id,
+        hostile: true,
+      })
+      return
+    }
     applyHit(e, ctx, t)
+  },
+
+  /** Camp guard: mill about the fire and pounce on an intruding hero. */
+  Guard(e, ctx, dt) {
+    const camp = findById(ctx.state.enemyCamps, e.campId)
+    if (!camp || camp.cleared) {
+      e.campId = null
+      return go(e, 'Retreat', 'Fleeing')
+    }
+    e.retargetIn -= dt
+    if (e.retargetIn <= 0) {
+      e.retargetIn = 0.5
+      const t = chooseTarget(e, ctx)
+      if (t) {
+        e.target = t
+        return go(e, 'Move', 'Moving')
+      }
+    }
+    const home = camp.x + ((e.id % 5) - 2) * 22
+    e.state = moveToward(ctx, e, home, def(e, ctx).movementSpeed * 0.4, dt, 4)
+      ? 'Idle'
+      : 'Moving'
   },
 
   TargetDestroyed(e) {
@@ -275,7 +335,9 @@ export const enemyNodes: Nodes<Enemy> = {
 
   /** Dawn: surviving enemies withdraw back to where they came from. */
   Retreat(e, ctx, dt) {
-    const far = e.side * (ctx.config.world.spawnDistance + 120)
+    const far =
+      e.side *
+      Math.max(ctx.config.world.spawnDistance + 120, Math.abs(e.x) + 150)
     if (step(e, ctx, far, dt, 4)) {
       // Gone from the map: expire immediately (not a kill).
       e.state = 'Dead'

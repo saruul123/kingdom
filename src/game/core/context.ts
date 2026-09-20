@@ -9,6 +9,8 @@ import type {
   Side,
   TargetRef,
   Camp,
+  EnemyCamp,
+  Enemy,
   Citizen,
 } from './types'
 
@@ -26,6 +28,7 @@ export interface DamageApi {
   damageEnemy: (id: number, amount: number, sourceId?: number | null) => void
   damageBuilding: (id: number, amount: number) => void
   damageCitizen: (id: number, amount: number) => void
+  damageCamp: (id: number, amount: number) => void
   damageAnimal: (id: number, amount: number, sourceId?: number | null) => void
   hitHero: (fromX: number, amount: number) => void
 }
@@ -38,6 +41,8 @@ export interface CombatApi {
     damage: number
     speed: number
     sourceId: number | null
+    hostile?: boolean
+    fromHero?: boolean
   }) => void
 }
 
@@ -51,6 +56,10 @@ export interface BuildingApi {
   releaseTowerSlot: (archer: Citizen) => void
   ger: () => Building | undefined
   archerCapacity: (b: Building) => number
+  /** Reserve a pasture slot for a herder; returns the pasture or undefined. */
+  claimPastureSlot: (herder: Citizen) => Building | undefined
+  /** Reserve a market slot for a trader; returns the market or undefined. */
+  claimMarketSlot: (trader: Citizen) => Building | undefined
   /** Extra archer range granted by this building's upgrade level. */
   extraRange: (b: Building) => number
 }
@@ -75,7 +84,8 @@ export interface WaveApi {
 }
 
 export interface EnemyApi {
-  spawn: (type: string, side: Side) => void
+  spawn: (type: string, side: Side, x?: number) => Enemy | undefined
+  spawnGuard: (camp: EnemyCamp) => void
 }
 
 export interface CitizenApi {

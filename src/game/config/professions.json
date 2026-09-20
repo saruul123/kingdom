@@ -20,5 +20,33 @@
     "repairRate": 10,
     "maxPerTask": 3,
     "criticalHealthRatio": 0.5
+  },
+  "herder": {
+    "label": "Малчин",
+    "cost": 2,
+    "health": 20,
+    "speed": 70,
+    "incomeInterval": 16,
+    "income": 1
+  },
+  "horseman": {
+    "label": "Морьт дайчин",
+    "cost": 4,
+    "health": 45,
+    "speed": 150,
+    "damage": 9,
+    "cooldown": 0.8,
+    "range": 34,
+    "aggroRange": 300,
+    "patrolRadius": 550
+  },
+  "trader": {
+    "label": "Худалдаачин",
+    "cost": 3,
+    "health": 25,
+    "speed": 62,
+    "rewardBase": 1,
+    "rewardPer100": 0.5,
+    "waitTime": 2.5
   }
 }

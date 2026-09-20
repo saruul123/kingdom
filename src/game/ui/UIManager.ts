@@ -47,7 +47,10 @@ export class UIManager implements System {
         this.announce(mn.sunSetting)
         bus.emit('sfx', { name: 'horn' })
       }
-      if (phase === 'Night') this.announce(mn.nightN(day))
+      if (phase === 'Night')
+        this.announce(
+          ctx.state.bossNight.active ? mn.bossAnnounce : mn.nightN(day),
+        )
     })
     bus.on('phaseChanged', ({ phase }) => {
       if (phase === 'Night') {

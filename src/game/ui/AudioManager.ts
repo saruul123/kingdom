@@ -49,15 +49,79 @@ const SOUNDS: Record<SfxName, Tone[]> = {
 export class AudioManager {
   muted = false
   private ac: AudioContext | null = null
-  private off: () => void
+  private offs: (() => void)[]
+  private mood: 'day' | 'night' = 'day'
+  private musicTimer: ReturnType<typeof setInterval> | null = null
+  private beat = 0
 
   constructor(bus: EventBus) {
-    this.off = bus.on('sfx', ({ name }) => this.play(name))
+    this.offs = [
+      bus.on('sfx', ({ name }) => this.play(name)),
+      bus.on('phaseChanged', ({ phase }) => {
+        this.mood = phase === 'Night' || phase === 'Sunset' ? 'night' : 'day'
+      }),
+    ]
   }
 
   dispose(): void {
-    this.off()
+    for (const off of this.offs) off()
+    this.stopMusic()
     void this.ac?.close().catch(() => undefined)
+  }
+
+  /** A quiet, generative pentatonic line: brighter by day, low and sparse at night. */
+  startMusic(): void {
+    if (this.musicTimer !== null || typeof AudioContext === 'undefined') return
+    this.musicTimer = setInterval(() => this.tick(), 950)
+  }
+
+  stopMusic(): void {
+    if (this.musicTimer !== null) clearInterval(this.musicTimer)
+    this.musicTimer = null
+  }
+
+  private tick(): void {
+    if (this.muted) return
+    const ac = this.context()
+    if (!ac) return
+    if (ac.state !== 'running') {
+      void ac.resume().catch(() => undefined)
+      return
+    }
+    const night = this.mood === 'night'
+    this.beat++
+    if (night && this.beat % 2 === 0) return
+    // anhemitonic pentatonic on D
+    const scale = [293.66, 329.63, 392, 440, 493.88]
+    const melody = [0, 2, 1, 3, 4, 2, 3, 1]
+    const octave = night ? 0.5 : 1
+    this.note(
+      scale[melody[this.beat % 8]] * octave,
+      night ? 1.8 : 1.2,
+      night ? 0.028 : 0.032,
+    )
+    if (this.beat % 8 === 0) this.note(scale[0] * 0.5, 3.2, 0.03, 'sine')
+  }
+
+  private note(
+    freq: number,
+    dur: number,
+    gain: number,
+    type: OscillatorType = 'triangle',
+  ): void {
+    const ac = this.ac
+    if (!ac) return
+    const now = ac.currentTime
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, now)
+    g.gain.setValueAtTime(0.0001, now)
+    g.gain.exponentialRampToValueAtTime(gain, now + 0.05)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur)
+    osc.connect(g).connect(ac.destination)
+    osc.start(now)
+    osc.stop(now + dur + 0.05)
   }
 
   private context(): AudioContext | null {

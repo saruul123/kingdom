@@ -3,6 +3,7 @@ import type {
   Building,
   Citizen,
   Enemy,
+  EnemyCamp,
   GameState,
   TargetRef,
 } from './types'
@@ -19,6 +20,9 @@ export const isAlive = (e: { state: string }) => e.state !== 'Dead'
 
 export const liveEnemies = (state: GameState): Enemy[] =>
   state.enemies.filter(isAlive)
+/** Night raiders: alive enemies not tied to a camp (camp guards stay home). */
+export const liveRaiders = (state: GameState): Enemy[] =>
+  state.enemies.filter((e) => isAlive(e) && e.campId === null)
 export const liveCitizens = (state: GameState): Citizen[] =>
   state.citizens.filter(isAlive)
 
@@ -33,6 +37,7 @@ export type Resolved =
   | { kind: 'citizen'; entity: Citizen }
   | { kind: 'enemy'; entity: Enemy }
   | { kind: 'animal'; entity: Animal }
+  | { kind: 'camp'; entity: EnemyCamp }
   | { kind: 'hero'; entity: null }
   | { kind: 'banner'; entity: null }
 
@@ -63,6 +68,10 @@ export function resolveTarget(
     }
     case 'hero':
       return { kind: 'hero', entity: null }
+    case 'camp': {
+      const c = findById(state.enemyCamps, ref.id)
+      return c && !c.cleared ? { kind: 'camp', entity: c } : undefined
+    }
     case 'banner':
       return state.banner.state === 'ground'
         ? { kind: 'banner', entity: null }

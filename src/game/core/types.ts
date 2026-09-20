@@ -13,13 +13,23 @@ export type UnitState =
   | 'Fleeing'
   | 'Dead'
 
-export type ProfessionId = 'Citizen' | 'Archer' | 'Builder'
-export type BuildingType = 'ger' | 'wall' | 'tower'
+export type ProfessionId =
+  'Citizen' | 'Archer' | 'Builder' | 'Herder' | 'Horseman' | 'Trader'
+export type BuildingType =
+  | 'ger'
+  | 'wall'
+  | 'tower'
+  | 'gate'
+  | 'pasture'
+  | 'stable'
+  | 'market'
+  | 'ortoo'
+  | 'outpost'
 export type BuildingState =
   'Planned' | 'UnderConstruction' | 'Active' | 'Damaged' | 'Destroyed'
 
 export type TargetKind =
-  'building' | 'citizen' | 'enemy' | 'animal' | 'hero' | 'banner'
+  'building' | 'citizen' | 'enemy' | 'animal' | 'hero' | 'banner' | 'camp'
 export interface TargetRef {
   kind: TargetKind
   id: number
@@ -34,6 +44,12 @@ export interface Hero {
   exhausted: boolean
   sprinting: boolean
   invulnerable: number
+  /** Seconds until the hero can shoot again. */
+  attackCooldown: number
+  /** Draw the bow-pull frames while > 0. */
+  attackFlash: number
+  /** Speed boost (seconds left) from a well. */
+  boost: number
 }
 
 export interface Banner {
@@ -120,11 +136,13 @@ export interface Enemy {
   carryingBanner: boolean
   deadTimer: number
   hitFlash: number
+  /** Guards belong to an enemy camp and stay near it. */
+  campId: number | null
 }
 
 export interface Animal {
   id: number
-  type: 'rabbit' | 'deer'
+  type: 'rabbit' | 'deer' | 'wolf'
   x: number
   facing: Side
   health: number
@@ -134,6 +152,8 @@ export interface Animal {
   reward: number
   claimedBy: number | null
   deadTimer: number
+  /** Seconds until a hostile animal can bite again. */
+  cooldown: number
 }
 
 export interface CoinPickup {
@@ -161,6 +181,10 @@ export interface Projectile {
   /** Last known target position, used if the target vanishes mid-flight. */
   lastX: number
   lastY: number
+  /** Fired by raiders: hurts buildings, citizens and the hero instead of enemies. */
+  hostile: boolean
+  /** Fired by the hero (a kill earns the animal's reward). */
+  fromHero: boolean
 }
 
 export interface Camp {
@@ -169,14 +193,44 @@ export interface Camp {
   capacity: number
 }
 
+export interface EnemyCamp {
+  id: number
+  x: number
+  health: number
+  maxHealth: number
+  spawnTimer: number
+  cleared: boolean
+}
+
+export interface ExtraBuildPoint {
+  id: string
+  building: string
+  x: number
+  requires: string | null
+}
+
 export interface Ovoo {
   x: number
+  /** Day of the last offering (one per ovoo per day). */
+  usedDay: number
+}
+
+export interface Well {
+  x: number
+  usedDay: number
+}
+
+export interface Ruin {
+  x: number
+  looted: boolean
 }
 
 export interface SpawnEntry {
   type: string
   side: Side
   at: number
+  /** Spawn here instead of at the map edge (enemy camps). */
+  x?: number
 }
 
 export interface WaveState {
@@ -206,6 +260,7 @@ export interface GameState {
   rngState: number
   nextId: number
   status: 'playing' | 'gameOver'
+  difficulty: 'easy' | 'normal' | 'hard'
   gameOverReason: string | null
   currentDay: number
   currentPhase: Phase
@@ -225,7 +280,16 @@ export interface GameState {
   coinPickups: CoinPickup[]
   projectiles: Projectile[]
   camps: Camp[]
+  enemyCamps: EnemyCamp[]
+  /** Build points unlocked by outposts. */
+  extraBuildPoints: ExtraBuildPoint[]
   ovoos: Ovoo[]
+  wells: Well[]
+  ruins: Ruin[]
+  /** Nights of archer blessing left (from an ovoo offering). */
+  blessing: number
+  /** Names of achievements earned so far. */
+  achievements: string[]
   /** Extent of the steppe the hero has seen (drives the map's fog of war). */
   explored: { min: number; max: number }
   wave: WaveState

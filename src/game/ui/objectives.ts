@@ -40,10 +40,11 @@ export function currentObjective(ctx: GameContext): Objective | null {
   const free = mine.filter(
     (c) => c.profession === 'Citizen' && c.pendingProfession === null,
   )
-  const count = (p: 'Archer' | 'Builder') =>
+  const count = (p: 'Archer' | 'Builder' | 'Herder' | 'Trader') =>
     mine.filter((c) => c.profession === p || c.pendingProfession === p).length
   const archers = count('Archer')
   const builders = count('Builder')
+  const herders = count('Herder')
   const built = state.buildings.filter((b) => b.type !== 'ger')
   const towers = built.filter((b) => b.type === 'tower').length
 
@@ -60,7 +61,7 @@ export function currentObjective(ctx: GameContext): Objective | null {
     )
     return { id: 'recruit', text, targetX: neutral?.x ?? null }
   }
-  const stand = (profession: 'archer' | 'builder') =>
+  const stand = (profession: 'archer' | 'builder' | 'herder') =>
     config.content.stands.find((s) => s.profession === profession)
   const buildPoint = (type: string) => {
     const open = config.content.buildPoints.filter(
@@ -118,6 +119,29 @@ export function currentObjective(ctx: GameContext): Objective | null {
         }
       )
   }
+  const pastures = built.filter((b) => b.type === 'pasture')
+  if (towers > 0 && pastures.length === 0) {
+    const p = buildPoint('pasture')
+    if (p)
+      return (
+        needCoins(config.buildings.pasture.cost) ?? {
+          id: 'pasture',
+          text: mn.objective.pasture,
+          targetX: p.x,
+        }
+      )
+  }
+  if (pastures.some((b) => b.state === 'Active') && herders === 0) {
+    if (free.length === 0)
+      return needCoins(config.recruitCost) ?? recruit(mn.objective.moreCitizens)
+    return (
+      needCoins(config.professions.herder.cost) ?? {
+        id: 'herder',
+        text: mn.objective.herder,
+        targetX: stand('herder')?.x ?? null,
+      }
+    )
+  }
   if (
     state.buildings.every((b) => b.level === 1 && !b.upgrading) &&
     built.length >= 2
@@ -128,5 +152,79 @@ export function currentObjective(ctx: GameContext): Objective | null {
     if (target)
       return { id: 'upgrade', text: mn.objective.upgrade, targetX: target.x }
   }
+  if (state.kingdomLevel < 4 && built.length >= 3) {
+    const up = config.buildings.ger.upgrades.at(state.kingdomLevel - 1)
+    if (up && !ger?.upgrading)
+      return (
+        needCoins(up.cost) ?? {
+          id: 'ger',
+          text: mn.objective.ger,
+          targetX: ger?.x ?? 0,
+        }
+      )
+  }
+  if (state.kingdomLevel >= 2) {
+    const markets = state.buildings.filter((b) => b.type === 'market')
+    const mp = buildPoint('market')
+    if (markets.length === 0 && mp)
+      return (
+        needCoins(config.buildings.market.cost) ?? {
+          id: 'market',
+          text: mn.objective.market,
+          targetX: mp.x,
+        }
+      )
+    const trader = count('Trader')
+    if (markets.some((b) => b.state === 'Active') && trader === 0) {
+      if (free.length === 0)
+        return (
+          needCoins(config.recruitCost) ?? recruit(mn.objective.moreCitizens)
+        )
+      const m = markets.find((b) => b.state === 'Active')
+      return (
+        needCoins(config.professions.trader.cost) ?? {
+          id: 'trader',
+          text: mn.objective.trader,
+          targetX: m?.x ?? null,
+        }
+      )
+    }
+  }
+  if (
+    state.kingdomLevel >= 3 &&
+    !state.buildings.some((b) => b.type === 'ortoo')
+  ) {
+    const op = buildPoint('ortoo')
+    if (op)
+      return (
+        needCoins(config.buildings.ortoo.cost) ?? {
+          id: 'ortoo',
+          text: mn.objective.ortoo,
+          targetX: op.x,
+        }
+      )
+  }
+  const explored = (x: number) =>
+    x >= state.explored.min && x <= state.explored.max
+  const cleared = state.enemyCamps.find(
+    (c) =>
+      c.cleared &&
+      !state.buildings.some((b) => b.buildPointId === `camp:${c.id}`),
+  )
+  if (cleared)
+    return (
+      needCoins(config.content.enemyCamps.outpostCost) ?? {
+        id: 'outpost',
+        text: mn.objective.outpost,
+        targetX: cleared.x,
+      }
+    )
+  const camp = nearest(
+    state.enemyCamps.filter((c) => !c.cleared && explored(c.x)),
+    hx,
+    (c) => c.x,
+  )
+  if (camp && archers >= 2)
+    return { id: 'camp', text: mn.objective.camp, targetX: camp.x }
   return null
 }

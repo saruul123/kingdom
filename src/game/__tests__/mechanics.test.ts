@@ -16,6 +16,8 @@ function setup(overrides?: Parameters<typeof createConfig>[0]) {
     persist: false,
     config: createConfig(overrides),
   })
+  game.state.enemyCamps = []
+  game.state.enemies = []
   return { game, input }
 }
 
@@ -57,7 +59,7 @@ describe('building upgrades', () => {
   it('a maxed building offers no further upgrade', () => {
     const { game } = setup()
     const wall = createBuilding(game.ctx, 'wall', -300, 'wallL1', true)
-    wall.level = 2
+    wall.level = 3
     game.state.buildings.push(wall)
     game.state.hero.x = -300
     game.step(STEP)

@@ -1,16 +1,21 @@
 import type { GameConfig } from '../config'
 import type { GameState } from './types'
 
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 6
 
 /** Blank state for a new game; WorldManager fills in the world itself. */
-export function newGameState(config: GameConfig, seed: number): GameState {
+export function newGameState(
+  config: GameConfig,
+  seed: number,
+  difficulty: GameState['difficulty'] = 'normal',
+): GameState {
   return {
     version: SAVE_VERSION,
     seed,
     rngState: seed | 0,
     nextId: 1,
     status: 'playing',
+    difficulty,
     gameOverReason: null,
     currentDay: 1,
     currentPhase: 'Day',
@@ -20,7 +25,10 @@ export function newGameState(config: GameConfig, seed: number): GameState {
         config.time.sunriseDuration -
         config.time.sunsetDuration,
     ),
-    coins: config.hero.startCoins,
+    coins: Math.max(
+      0,
+      config.hero.startCoins + config.difficulty[difficulty].startCoins,
+    ),
     era: 1,
     kingdomLevel: 1,
     controlledTerritories: [
@@ -39,6 +47,9 @@ export function newGameState(config: GameConfig, seed: number): GameState {
       exhausted: false,
       sprinting: false,
       invulnerable: 0,
+      attackCooldown: 0,
+      attackFlash: 0,
+      boost: 0,
     },
     banner: { state: 'held', x: 0, carrierId: null, delay: 0 },
     citizens: [],
@@ -48,7 +59,13 @@ export function newGameState(config: GameConfig, seed: number): GameState {
     coinPickups: [],
     projectiles: [],
     camps: [],
+    enemyCamps: [],
+    extraBuildPoints: [],
     ovoos: [],
+    wells: [],
+    ruins: [],
+    blessing: 0,
+    achievements: [],
     explored: { min: -400, max: 400 },
     wave: { night: 0, elapsed: 0, queue: [], total: 0 },
     stats: {

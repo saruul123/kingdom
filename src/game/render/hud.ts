@@ -215,8 +215,20 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   }
 
   // --- population, objective, map
-  drawPopulation(g, game, cx, cy + 24 * u, u)
-  drawObjective(g, game, o, cx, cy + 41 * u, u)
+  // keep the left column clear of the map in the middle of the top edge
+  const mapLeft =
+    o.W / 2 - Math.min(170 * u, o.W - 224 * u) / 2 > 116 * u
+      ? o.W / 2 - Math.min(170 * u, o.W - 224 * u) / 2
+      : o.W
+  const popBottom = drawPopulation(
+    g,
+    game,
+    cx,
+    cy + 24 * u,
+    u,
+    mapLeft - cx - 6 * u,
+  )
+  drawObjective(g, game, o, cx, popBottom + 4 * u, u)
   drawMinimap(g, game, o, u)
   drawThreats(g, game, o, u)
   drawFloats(g, game, o, u)

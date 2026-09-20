@@ -41,6 +41,15 @@ export class ConstructionSystem implements System, ConstructionApi {
     b.upgradeProgress = 0
     const { bus } = this.ctx
     bus.emit('buildingUpgraded', { id: b.id, type: b.type, level: b.level })
+    if (b.type === 'ger') {
+      this.ctx.state.kingdomLevel = b.level
+      this.ctx.state.era = b.level
+      bus.emit('eraChanged', { era: b.level })
+      bus.emit('toast', {
+        text: mn.eraReached(mn.eraName(b.level)),
+        kind: 'good',
+      })
+    }
     bus.emit('toast', { text: mn.upgradeDone(up.label), kind: 'good' })
     bus.emit('sfx', { name: 'build' })
   }
