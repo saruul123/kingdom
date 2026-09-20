@@ -1,0 +1,24 @@
+{
+  "archer": {
+    "label": "Archer",
+    "cost": 2,
+    "health": 25,
+    "speed": 85,
+    "range": 300,
+    "towerRangeBonus": 90,
+    "damage": 9,
+    "cooldown": 1.1,
+    "arrowSpeed": 650,
+    "huntRadius": 1000
+  },
+  "builder": {
+    "label": "Builder",
+    "cost": 1,
+    "health": 25,
+    "speed": 80,
+    "buildRate": 1,
+    "repairRate": 10,
+    "maxPerTask": 3,
+    "criticalHealthRatio": 0.5
+  }
+}

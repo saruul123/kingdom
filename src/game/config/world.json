@@ -1,0 +1,66 @@
+{
+  "buildPoints": [
+    { "id": "towerL1", "building": "tower", "x": -215, "requires": null },
+    { "id": "wallL1", "building": "wall", "x": -300, "requires": null },
+    { "id": "towerR1", "building": "tower", "x": 215, "requires": null },
+    { "id": "wallR1", "building": "wall", "x": 300, "requires": null },
+    { "id": "towerL2", "building": "tower", "x": -415, "requires": "wallL1" },
+    { "id": "wallL2", "building": "wall", "x": -500, "requires": "wallL1" },
+    { "id": "towerR2", "building": "tower", "x": 415, "requires": "wallR1" },
+    { "id": "wallR2", "building": "wall", "x": 500, "requires": "wallR1" }
+  ],
+  "stands": [
+    { "id": "bowRack", "profession": "archer", "x": -75, "label": "Bow Rack" },
+    {
+      "id": "hammerRack",
+      "profession": "builder",
+      "x": 75,
+      "label": "Hammer Rack"
+    }
+  ],
+  "camps": {
+    "minX": 850,
+    "maxX": 2800,
+    "spacing": [420, 700],
+    "capacity": [1, 2],
+    "respawnPerDay": 1
+  },
+  "caches": {
+    "initial": [
+      { "x": -260, "amount": 2 },
+      { "x": 240, "amount": 2 },
+      { "x": -470, "amount": 1 },
+      { "x": 520, "amount": 1 }
+    ],
+    "count": 16,
+    "minX": 700,
+    "maxX": 2900,
+    "baseAmount": 1,
+    "amountPerDistance": 0.0014,
+    "respawnPerDay": 2
+  },
+  "ovoos": { "count": 4, "minX": 800, "maxX": 2800 },
+  "wildlife": {
+    "rabbit": {
+      "label": "Rabbit",
+      "health": 4,
+      "speed": 55,
+      "fleeSpeed": 95,
+      "fleeRange": 120,
+      "reward": 1,
+      "perSide": 5
+    },
+    "deer": {
+      "label": "Deer",
+      "health": 16,
+      "speed": 70,
+      "fleeSpeed": 120,
+      "fleeRange": 190,
+      "reward": 3,
+      "perSide": 2
+    },
+    "minX": 380,
+    "maxX": 1150,
+    "respawnPerDay": 4
+  }
+}

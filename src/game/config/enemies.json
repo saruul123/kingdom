@@ -1,0 +1,19 @@
+{
+  "bandit": {
+    "label": "Bandit",
+    "health": 30,
+    "damage": 6,
+    "movementSpeed": 62,
+    "attackRange": 30,
+    "attackCooldown": 1.1,
+    "heroAggroRange": 140,
+    "targetPriority": [
+      "banner",
+      "wall",
+      "tower",
+      "defender",
+      "citizen",
+      "palace"
+    ]
+  }
+}

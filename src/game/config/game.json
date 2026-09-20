@@ -1,0 +1,48 @@
+{
+  "time": {
+    "dayDuration": 360,
+    "nightDuration": 120,
+    "sunsetDuration": 30,
+    "sunriseDuration": 8,
+    "nightEndsWhenCleared": true,
+    "spawnWindow": 0.45
+  },
+  "hero": {
+    "speed": 190,
+    "sprintSpeed": 330,
+    "acceleration": 900,
+    "maxStamina": 5,
+    "staminaDrain": 1,
+    "staminaRegen": 0.8,
+    "staminaRecoverAt": 1.5,
+    "startCoins": 6,
+    "pickupRadius": 24,
+    "hitCoinLoss": 2,
+    "invulnerableTime": 1.2,
+    "knockback": 70
+  },
+  "recruitCost": 1,
+  "recruitRadius": 46,
+  "citizen": {
+    "speed": 70,
+    "health": 20,
+    "wanderRadius": 90,
+    "fleeRange": 110
+  },
+  "territory": {
+    "initialRadius": 640
+  },
+  "world": {
+    "minX": -3000,
+    "maxX": 3000,
+    "spawnDistance": 1250
+  },
+  "economy": {
+    "coinPickupDelay": 0.8,
+    "gerCoinDropSpread": 60
+  },
+  "save": {
+    "autosaveKey": "mdrl.autosave.v1",
+    "exitKey": "mdrl.exit.v1"
+  }
+}

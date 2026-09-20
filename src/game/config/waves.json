@@ -1,0 +1,20 @@
+{
+  "bossInterval": 7,
+  "nights": [
+    {
+      "from": 1,
+      "to": 3,
+      "groups": [{ "type": "bandit", "base": 2, "perNight": 1 }]
+    },
+    {
+      "from": 4,
+      "to": 7,
+      "groups": [{ "type": "bandit", "base": 5, "perNight": 1 }]
+    },
+    {
+      "from": 8,
+      "to": 9999,
+      "groups": [{ "type": "bandit", "base": 8, "perNight": 1 }]
+    }
+  ]
+}
