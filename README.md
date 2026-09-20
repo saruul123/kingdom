@@ -37,7 +37,9 @@ Phases 6–9 (horsemen, territory, trade, boss nights…) are not started.
   Combat, Damage, Enemy, Wave, Territory, Save, Player. They talk via `ctx.sys`
   interfaces (`core/context.ts`) and the event bus, never via `GameManager`.
 - `ai/` — state machines for archers, builders, citizens and enemies.
-- `render/` + `ui/` — canvas rendering, HUD, audio. Reads state only; placeholder art.
+- `render/` + `ui/` — pixel-art canvas renderer (low-res buffer, nearest-neighbour upscale), HUD, audio. Reads state only.
+  Hero sprites come from `src/assests/model.png` via `scripts/extract-hero-sprites.py` → `src/assests/sprites/hero.png`;
+  `cover.png` is the menu background; everything else is drawn procedurally in `render/sprites.ts` / `atmosphere.ts`.
 - `GameManager.ts` — composition root; `GameShell.tsx` — React menu/pause/game-over shell.
 
 State is JSON-serialisable, so saves are just `JSON.stringify(state)`.

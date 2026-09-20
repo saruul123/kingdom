@@ -1,12 +1,12 @@
 import type { GameManager } from '../GameManager'
 import type { ToastKind } from '../core/events'
 import { isAlive } from '../core/lookup'
-import { PAL } from './sprites'
+import { bitmap } from './pixel'
+import type { G } from './pixel'
 
-type G = CanvasRenderingContext2D
-
-const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
-const SANS = "'Manrope', system-ui, 'Segoe UI', sans-serif"
+const FONT =
+  "'Pixelify Sans', 'Press Start 2P', ui-monospace, 'Courier New', monospace"
+const DISPLAY = "'Pixelify Sans', 'Fraunces', Georgia, serif"
 
 const TOAST_COLOR: Record<ToastKind, string> = {
   info: '#f4ead2',
@@ -15,257 +15,311 @@ const TOAST_COLOR: Record<ToastKind, string> = {
   danger: '#ff9b8a',
 }
 
-function pill(
-  g: G,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  fill: string,
-  stroke?: string,
-): void {
-  g.beginPath()
-  g.roundRect(x, y, w, h, h / 2)
-  g.fillStyle = fill
-  g.fill()
-  if (stroke) {
-    g.strokeStyle = stroke
-    g.lineWidth = 1.5
-    g.stroke()
-  }
-}
+const BAG = [
+  '...dddd....',
+  '....rr.....',
+  '..dddddd...',
+  '.dyyyyyyd..',
+  'dyyYYyyyyd.',
+  'dyYyyyyyyd.',
+  'dyYyyyyyyd.',
+  'dyyyyyyyyd.',
+  '.dyyyyyyd..',
+  '..dddddd...',
+]
+const BAG_PAL = { d: '#7a5410', y: '#e8b823', Y: '#fff0a0', r: '#c0392b' }
 
-function sunIcon(g: G, x: number, y: number, r: number): void {
-  g.fillStyle = '#ffd24a'
-  g.strokeStyle = '#ffd24a'
-  g.lineWidth = r * 0.22
-  g.beginPath()
-  g.arc(x, y, r * 0.55, 0, Math.PI * 2)
-  g.fill()
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4
-    g.beginPath()
-    g.moveTo(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8)
-    g.lineTo(x + Math.cos(a) * r * 1.1, y + Math.sin(a) * r * 1.1)
-    g.stroke()
-  }
-}
-
-function moonIcon(g: G, x: number, y: number, r: number): void {
-  g.fillStyle = '#dfe6ff'
-  g.beginPath()
-  g.arc(x, y, r * 0.9, 0, Math.PI * 2)
-  g.fill()
-  g.globalCompositeOperation = 'destination-out'
-  g.beginPath()
-  g.arc(x + r * 0.45, y - r * 0.2, r * 0.8, 0, Math.PI * 2)
-  g.fill()
-  g.globalCompositeOperation = 'source-over'
-}
-
-function coinIcon(g: G, x: number, y: number, r: number): void {
-  g.fillStyle = PAL.goldDark
-  g.beginPath()
-  g.arc(x, y, r, 0, Math.PI * 2)
-  g.fill()
-  g.fillStyle = PAL.gold
-  g.beginPath()
-  g.arc(x, y, r * 0.8, 0, Math.PI * 2)
-  g.fill()
-  g.fillStyle = PAL.goldDark
-  g.fillRect(x - r * 0.22, y - r * 0.22, r * 0.44, r * 0.44)
-}
+const SUN = [
+  '....y....',
+  '.y..y..y.',
+  '..yyyyy..',
+  '..yyyyy..',
+  'yyyyyyyyy',
+  '..yyyyy..',
+  '..yyyyy..',
+  '.y..y..y.',
+  '....y....',
+]
+const MOON = [
+  '...yyy...',
+  '..yyy....',
+  '.yyy.....',
+  '.yyy.....',
+  '.yyy.....',
+  '.yyy.....',
+  '..yyy....',
+  '...yyyyy.',
+  '.....yyy.',
+]
+const FLAG = [
+  'yyyyyy..',
+  'yBBBBBy.',
+  'yBYYBBBy',
+  'yBBYBBy.',
+  'yBYYYBBy',
+  'yBBBBBy.',
+  'y.......',
+  'y.......',
+  'y.......',
+]
 
 export interface HudOptions {
   W: number
   H: number
+  /** Pixel scale of the low-res buffer. */
+  ps: number
+  /** Buffer width in pixels. */
+  bw: number
   camX: number
-  scale: number
+  /** Ground line in buffer pixels. */
   groundY: number
   debug: boolean
   fps: number
 }
 
+/** Stepped-corner panel: gold rim, dark navy fill. */
+function panel(
+  g: G,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  u: number,
+  rim: string,
+): void {
+  g.fillStyle = rim
+  g.fillRect(x + u, y, w - 2 * u, h)
+  g.fillRect(x, y + u, w, h - 2 * u)
+  g.fillStyle = 'rgba(14,18,44,0.9)'
+  g.fillRect(x + 2 * u, y + u, w - 4 * u, h - 2 * u)
+  g.fillRect(x + u, y + 2 * u, w - 2 * u, h - 4 * u)
+  g.fillStyle = 'rgba(255,255,255,0.08)'
+  g.fillRect(x + 2 * u, y + u, w - 4 * u, u)
+}
+
+function text(
+  g: G,
+  s: string,
+  x: number,
+  y: number,
+  size: number,
+  colour: string,
+  align: CanvasTextAlign = 'left',
+  font = FONT,
+): void {
+  g.font = `600 ${size}px ${font}`
+  g.textAlign = align
+  g.textBaseline = 'middle'
+  g.fillStyle = 'rgba(0,0,0,0.55)'
+  g.fillText(s, x + Math.max(1, size / 12), y + Math.max(1, size / 12))
+  g.fillStyle = colour
+  g.fillText(s, x, y)
+}
+
 /** Minimal HUD: coins top-left, day/night indicator top-centre, contextual prompts. */
 export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   const { state, ui, config } = game
-  const hs = Math.max(0.8, Math.min(1.6, o.H / 720))
+  const u = o.ps
+  const fs = 8 * u
   g.save()
-  g.textBaseline = 'middle'
 
   // --- coins (top-left)
-  const pulse = 1 + ui.coinPulse * 0.18
-  const cx = 18 * hs
-  const cy = 20 * hs
-  g.save()
-  g.translate(cx, cy + 12 * hs)
-  g.scale(pulse, pulse)
-  g.translate(-cx, -(cy + 12 * hs))
-  pill(
+  const cx = 6 * u
+  const cy = 6 * u
+  const pulse = ui.coinPulse > 0 ? Math.round(ui.coinPulse * 2) * u : 0
+  panel(g, cx, cy, 50 * u + pulse, 15 * u, u, '#c9a24a')
+  bitmap(g, BAG, BAG_PAL, cx + 4 * u, cy + 3 * u, u)
+  text(
     g,
-    cx,
-    cy,
-    128 * hs,
-    26 * hs,
-    'rgba(38,26,14,0.72)',
-    'rgba(232,185,35,0.55)',
+    String(state.coins),
+    cx + 18 * u,
+    cy + 8 * u,
+    fs + Math.round(pulse / 2),
+    '#fff3cf',
   )
-  coinIcon(g, cx + 15 * hs, cy + 13 * hs, 8 * hs)
-  g.fillStyle = '#fff3cf'
-  g.font = `700 ${15 * hs}px ${SANS}`
-  g.textAlign = 'left'
-  g.fillText(`Coins: ${state.coins}`, cx + 30 * hs, cy + 14 * hs)
-  g.restore()
 
   const stamina = state.hero.stamina / config.hero.maxStamina
   if (stamina < 0.999) {
-    const bw = 128 * hs
-    g.fillStyle = 'rgba(38,26,14,0.6)'
-    g.fillRect(cx, cy + 32 * hs, bw, 5 * hs)
+    g.fillStyle = 'rgba(14,18,44,0.85)'
+    g.fillRect(cx, cy + 17 * u, 50 * u, 4 * u)
     g.fillStyle = state.hero.exhausted ? '#d96a4e' : '#8fd07a'
-    g.fillRect(cx, cy + 32 * hs, bw * stamina, 5 * hs)
+    g.fillRect(cx + u, cy + 18 * u, Math.round(48 * u * stamina), 2 * u)
   }
+
+  // banner status
+  const held = state.banner.state === 'held'
+  bitmap(
+    g,
+    FLAG,
+    { y: held ? '#c9a24a' : '#d9534f', B: '#2f5cc0', Y: '#f6dc78' },
+    cx + 54 * u,
+    cy + 3 * u,
+    u,
+  )
+  if (!held)
+    text(
+      g,
+      state.banner.state === 'carried' ? 'STOLEN!' : 'DROPPED',
+      cx + 66 * u,
+      cy + 8 * u,
+      fs,
+      '#ff9b8a',
+    )
 
   // --- day / night indicator (top-centre)
   const night = state.currentPhase === 'Night'
-  const label = `${night ? 'Night' : 'Day'} ${state.currentDay}`
-  const pw = 170 * hs
-  const px = o.W / 2 - pw / 2
-  pill(
+  const pw = 78 * u
+  const px0 = Math.round(o.W / 2 - pw / 2)
+  panel(g, px0, cy, pw, 15 * u, u, night ? '#7f8fd8' : '#c9a24a')
+  bitmap(
     g,
-    px,
-    cy,
-    pw,
-    26 * hs,
-    'rgba(38,26,14,0.72)',
-    night ? 'rgba(160,180,255,0.5)' : 'rgba(232,185,35,0.55)',
+    night ? MOON : SUN,
+    { y: night ? '#dfe6ff' : '#ffd24a' },
+    px0 + 5 * u,
+    cy + 3 * u,
+    u,
   )
-  if (night) moonIcon(g, px + 17 * hs, cy + 13 * hs, 8 * hs)
-  else sunIcon(g, px + 17 * hs, cy + 13 * hs, 8 * hs)
-  g.fillStyle = '#fff3cf'
-  g.font = `700 ${15 * hs}px ${SANS}`
-  g.textAlign = 'left'
-  g.fillText(label, px + 34 * hs, cy + 14 * hs)
-  g.fillStyle = 'rgba(255,243,207,0.6)'
-  g.font = `600 ${11 * hs}px ${SANS}`
-  g.textAlign = 'right'
-  g.fillText(state.currentPhase, px + pw - 14 * hs, cy + 14 * hs)
+  text(
+    g,
+    `${night ? 'Night' : 'Day'} ${state.currentDay}`,
+    px0 + 18 * u,
+    cy + 8 * u,
+    fs,
+    '#fff3cf',
+  )
+  text(
+    g,
+    state.currentPhase,
+    px0 + pw - 5 * u,
+    cy + 8 * u,
+    6 * u,
+    'rgba(255,243,207,0.6)',
+    'right',
+  )
 
-  // cycle bar: gold = daylight, navy = night, marker = now
+  // cycle bar: gold = daylight, orange = dusk, navy = night, marker = now
   const t = config.time
   const total = t.dayDuration + t.nightDuration
-  const phaseStart: Record<string, number> = {
+  const start: Record<string, number> = {
     Sunrise: 0,
     Day: t.sunriseDuration,
     Sunset: t.dayDuration - t.sunsetDuration,
     Night: t.dayDuration,
   }
   const dur = game.time.phaseDuration(state.currentPhase)
-  const elapsed = phaseStart[state.currentPhase] + (dur - state.timeRemaining)
-  const bx = px + 8 * hs
-  const bw = pw - 16 * hs
-  const by = cy + 31 * hs
+  const elapsed = start[state.currentPhase] + (dur - state.timeRemaining)
+  const bx = px0 + 3 * u
+  const bwid = pw - 6 * u
+  const by = cy + 17 * u
   g.fillStyle = '#e0a93a'
-  g.fillRect(bx, by, (bw * t.dayDuration) / total, 4 * hs)
+  g.fillRect(bx, by, Math.round((bwid * t.dayDuration) / total), 2 * u)
   g.fillStyle = '#e07b39'
   g.fillRect(
-    bx + (bw * (t.dayDuration - t.sunsetDuration)) / total,
+    bx + Math.round((bwid * (t.dayDuration - t.sunsetDuration)) / total),
     by,
-    (bw * t.sunsetDuration) / total,
-    4 * hs,
+    Math.round((bwid * t.sunsetDuration) / total),
+    2 * u,
   )
   g.fillStyle = '#26356b'
   g.fillRect(
-    bx + (bw * t.dayDuration) / total,
+    bx + Math.round((bwid * t.dayDuration) / total),
     by,
-    (bw * t.nightDuration) / total,
-    4 * hs,
+    Math.round((bwid * t.nightDuration) / total),
+    2 * u,
   )
-  const mx = bx + bw * Math.min(1, elapsed / total)
-  g.fillStyle = '#fff'
-  g.beginPath()
-  g.arc(mx, by + 2 * hs, 4 * hs, 0, Math.PI * 2)
-  g.fill()
+  g.fillStyle = '#ffffff'
+  const mx = bx + Math.round(bwid * Math.min(1, elapsed / total))
+  g.fillRect(mx - u, by - u, 2 * u, 4 * u)
 
-  // --- enemies remaining (night only)
+  // --- raiders remaining (night)
   if (night) {
     const alive = state.enemies.filter(isAlive).length + state.wave.queue.length
-    const ew = 120 * hs
-    const ex = o.W - ew - 18 * hs
-    pill(g, ex, cy, ew, 26 * hs, 'rgba(60,20,20,0.75)', 'rgba(255,120,100,0.5)')
-    g.fillStyle = '#ffd2c8'
-    g.font = `700 ${14 * hs}px ${SANS}`
-    g.textAlign = 'center'
-    g.fillText(`Raiders: ${alive}`, ex + ew / 2, cy + 14 * hs)
+    const ew = 52 * u
+    const ex = o.W - ew - 6 * u
+    panel(g, ex, cy, ew, 15 * u, u, '#d9534f')
+    text(
+      g,
+      `Raiders ${alive}`,
+      ex + ew / 2,
+      cy + 8 * u,
+      fs,
+      '#ffd2c8',
+      'center',
+    )
   }
 
   // --- toasts
-  g.textAlign = 'center'
-  let ty = cy + 64 * hs
+  let ty = cy + 30 * u
   for (const toast of ui.toasts) {
-    const a = Math.min(1, toast.age / 0.2, (toast.ttl - toast.age) / 0.5)
-    g.globalAlpha = Math.max(0, a)
-    g.font = `600 ${14 * hs}px ${SANS}`
-    const w = g.measureText(toast.text).width + 28 * hs
-    pill(g, o.W / 2 - w / 2, ty - 12 * hs, w, 24 * hs, 'rgba(30,20,10,0.75)')
-    g.fillStyle = TOAST_COLOR[toast.kind]
-    g.fillText(toast.text, o.W / 2, ty)
-    ty += 30 * hs
+    const a = Math.max(
+      0,
+      Math.min(1, toast.age / 0.2, (toast.ttl - toast.age) / 0.5),
+    )
+    g.globalAlpha = a
+    g.font = `600 ${7 * u}px ${FONT}`
+    const w = Math.ceil(g.measureText(toast.text).width) + 12 * u
+    panel(g, Math.round(o.W / 2 - w / 2), ty - 6 * u, w, 12 * u, u, '#6b5a3a')
+    text(g, toast.text, o.W / 2, ty, 7 * u, TOAST_COLOR[toast.kind], 'center')
+    ty += 15 * u
   }
   g.globalAlpha = 1
 
   // --- big announcement
   if (ui.banner) {
     const b = ui.banner
-    const a = Math.max(0, Math.min(1, b.age / 0.5, (b.ttl - b.age) / 0.8))
-    g.globalAlpha = a
-    g.font = `700 ${46 * hs}px ${SERIF}`
+    g.globalAlpha = Math.max(0, Math.min(1, b.age / 0.5, (b.ttl - b.age) / 0.8))
+    const size = 22 * u
+    g.font = `700 ${size}px ${DISPLAY}`
     g.textAlign = 'center'
-    g.lineWidth = 6 * hs
-    g.strokeStyle = 'rgba(20,10,0,0.7)'
-    g.strokeText(b.text, o.W / 2, o.H * 0.3)
+    g.textBaseline = 'middle'
+    const yy = Math.round(o.H * 0.28)
+    g.fillStyle = 'rgba(10,6,20,0.8)'
+    for (const [dx, dy] of [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [1, 1],
+      [-1, 1],
+    ])
+      g.fillText(b.text, o.W / 2 + dx * u, yy + dy * u)
     g.fillStyle = night ? '#dbe4ff' : '#fff1c9'
-    g.fillText(b.text, o.W / 2, o.H * 0.3)
+    g.fillText(b.text, o.W / 2, yy)
     g.globalAlpha = 1
   }
 
   // --- contextual prompt above the interactive object
   if (ui.prompt) {
     const p = ui.prompt
-    const sx = (p.x - o.camX) * o.scale + o.W / 2
-    const sy = o.groundY - 104 * o.scale
-    g.font = `700 ${14 * hs}px ${SANS}`
-    const tw = g.measureText(p.text).width
-    const w = tw + 58 * hs
-    const bob = Math.sin(performance.now() / 260) * 2
-    const fill =
-      p.state === 'ok'
-        ? 'rgba(38,26,14,0.9)'
-        : p.state === 'poor'
-          ? 'rgba(80,24,20,0.9)'
-          : 'rgba(50,50,50,0.85)'
-    const stroke =
-      p.state === 'ok' ? PAL.gold : p.state === 'poor' ? '#ff8a72' : '#999'
-    pill(g, sx - w / 2, sy - 14 * hs + bob, w, 28 * hs, fill, stroke)
-    g.fillStyle = 'rgba(255,255,255,0.16)'
-    g.beginPath()
-    g.roundRect(
-      sx - w / 2 + 6 * hs,
-      sy - 9 * hs + bob,
-      24 * hs,
-      18 * hs,
-      5 * hs,
+    const sx = Math.round((p.x - o.camX + o.bw / 2) * u)
+    const sy = Math.round(
+      (o.groundY - 104) * u + Math.sin(performance.now() / 260) * u,
     )
-    g.fill()
-    g.fillStyle = '#fff'
-    g.font = `800 ${12 * hs}px ${SANS}`
-    g.textAlign = 'center'
-    g.fillText('E', sx - w / 2 + 18 * hs, sy + bob + 1)
-    g.fillStyle =
-      p.state === 'ok' ? '#fff3cf' : p.state === 'poor' ? '#ffc4b8' : '#ccc'
-    g.font = `700 ${14 * hs}px ${SANS}`
-    g.textAlign = 'left'
-    g.fillText(p.text, sx - w / 2 + 40 * hs, sy + bob + 1)
+    g.font = `600 ${8 * u}px ${FONT}`
+    const tw = Math.ceil(g.measureText(p.text).width)
+    const w = tw + 26 * u
+    const rim =
+      p.state === 'ok' ? '#e8b823' : p.state === 'poor' ? '#e0705a' : '#8a8f9c'
+    panel(g, sx - Math.round(w / 2), sy - 8 * u, w, 16 * u, u, rim)
+    g.fillStyle = 'rgba(255,255,255,0.16)'
+    g.fillRect(sx - Math.round(w / 2) + 4 * u, sy - 5 * u, 10 * u, 10 * u)
+    text(
+      g,
+      'E',
+      sx - Math.round(w / 2) + 9 * u,
+      sy + u,
+      7 * u,
+      '#ffffff',
+      'center',
+    )
+    text(
+      g,
+      p.text,
+      sx - Math.round(w / 2) + 18 * u,
+      sy + u,
+      8 * u,
+      p.state === 'ok' ? '#fff3cf' : p.state === 'poor' ? '#ffc4b8' : '#cfd3dc',
+    )
   }
 
   // --- controls hint on the first day
@@ -274,26 +328,24 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
     ui.hintTime < 40 &&
     state.status === 'playing'
   ) {
-    const text =
-      '← → / A D ride   ·   Shift gallop   ·   E / ↓ / Space act   ·   P pause'
+    const msg =
+      'A D / ← →  ride    Shift  gallop    E / ↓ / Space  act    P  pause'
     g.globalAlpha = Math.min(1, (40 - ui.hintTime) / 4)
-    g.font = `600 ${13 * hs}px ${SANS}`
-    g.textAlign = 'center'
-    const w = g.measureText(text).width + 32 * hs
-    pill(g, o.W / 2 - w / 2, o.H - 44 * hs, w, 26 * hs, 'rgba(30,20,10,0.65)')
-    g.fillStyle = '#f4ead2'
-    g.fillText(text, o.W / 2, o.H - 30 * hs)
+    g.font = `600 ${7 * u}px ${FONT}`
+    const w = Math.ceil(g.measureText(msg).width) + 14 * u
+    panel(g, Math.round(o.W / 2 - w / 2), o.H - 22 * u, w, 13 * u, u, '#6b5a3a')
+    text(g, msg, o.W / 2, o.H - 15 * u, 7 * u, '#f4ead2', 'center')
     g.globalAlpha = 1
   }
 
   if (o.debug) {
-    g.textAlign = 'left'
-    g.font = `500 ${12 * hs}px monospace`
-    g.fillStyle = '#fff'
-    g.fillText(
-      `fps ${o.fps.toFixed(0)}  x=${state.hero.x.toFixed(0)}  cit=${state.citizens.length} en=${state.enemies.length} bld=${state.buildings.length} phase=${state.currentPhase} ${state.timeRemaining.toFixed(0)}s`,
-      18 * hs,
-      cy + 56 * hs,
+    text(
+      g,
+      `fps ${o.fps.toFixed(0)} x=${state.hero.x.toFixed(0)} cit=${state.citizens.length} en=${state.enemies.length} bld=${state.buildings.length} ${state.currentPhase} ${state.timeRemaining.toFixed(0)}s ps=${u}`,
+      6 * u,
+      cy + 26 * u,
+      6 * u,
+      '#ffffff',
     )
   }
   g.restore()

@@ -5,8 +5,8 @@
     "cost": 0,
     "buildWork": 0,
     "maxHealth": 400,
-    "width": 100,
-    "height": 56,
+    "width": 124,
+    "height": 86,
     "blocksEnemies": false,
     "archerCapacity": 0
   },
@@ -17,7 +17,7 @@
     "buildWork": 6,
     "maxHealth": 140,
     "width": 16,
-    "height": 38,
+    "height": 56,
     "blocksEnemies": true,
     "archerCapacity": 0
   },
@@ -28,7 +28,7 @@
     "buildWork": 10,
     "maxHealth": 180,
     "width": 30,
-    "height": 76,
+    "height": 88,
     "blocksEnemies": false,
     "archerCapacity": 2
   }

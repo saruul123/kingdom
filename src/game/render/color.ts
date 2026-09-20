@@ -2,12 +2,18 @@ type RGB = [number, number, number]
 
 const cache = new Map<string, RGB>()
 
-export function parse(hex: string): RGB {
-  let c = cache.get(hex)
+/** Parses '#rrggbb' or 'rgb(r,g,b)'. */
+export function parse(colour: string): RGB {
+  let c = cache.get(colour)
   if (!c) {
-    const n = parseInt(hex.slice(1), 16)
-    c = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-    cache.set(hex, c)
+    if (colour.startsWith('rgb')) {
+      const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(colour)
+      c = m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [0, 0, 0]
+    } else {
+      const n = parseInt(colour.slice(1), 16)
+      c = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    }
+    cache.set(colour, c)
   }
   return c
 }

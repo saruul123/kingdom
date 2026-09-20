@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createConfig } from './config'
 import { GameManager } from './GameManager'
 import { KeyboardInput } from './input/Input'
+import { loadAssets } from './render/assets'
 import { Renderer } from './render/Renderer'
+import type { Assets } from './render/sprites'
+import coverUrl from '../assests/cover.png'
 import { SaveStore } from './systems/SaveSystem'
 import { AudioManager } from './ui/AudioManager'
 
@@ -31,13 +34,15 @@ const params = () =>
     : new URLSearchParams(window.location.search)
 
 const btn =
-  'cursor-pointer rounded-full border px-6 py-2.5 text-sm font-extrabold tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
+  'cursor-pointer rounded-sm border-2 px-6 py-2.5 font-display text-base font-bold tracking-wider uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
 const btnPrimary = `${btn} border-amber-300 bg-amber-400 text-stone-900 hover:bg-amber-300`
 const btnGhost = `${btn} border-amber-200/40 bg-stone-900/60 text-amber-100 hover:bg-stone-800/80`
 
 export function GameShell() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const runtime = useRef<Runtime | null>(null)
+  const assetsRef = useRef<Assets | null>(null)
+  const [ready, setReady] = useState(false)
   const [screen, setScreen] = useState<Screen>('menu')
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -64,7 +69,8 @@ export function GameShell() {
   const start = useCallback(
     (mode: StartMode) => {
       const canvas = canvasRef.current
-      if (!canvas) return
+      const assets = assetsRef.current
+      if (!canvas || !assets) return
       stop()
 
       const config = createConfig()
@@ -89,7 +95,7 @@ export function GameShell() {
       audio.muted = mode === 'demo'
       const debug = q.has('debug')
       const speed = debug && q.get('speed') ? Number(q.get('speed')) : 1
-      const renderer = new Renderer(canvas, game, { debug })
+      const renderer = new Renderer(canvas, game, assets, { debug })
 
       const offOver = game.bus.on('gameOver', ({ reason }) => {
         setSummary({
@@ -162,12 +168,25 @@ export function GameShell() {
     return () => ro.disconnect()
   }, [])
 
-  // The menu shows a paused, live scene behind it.
   useEffect(() => {
+    let cancelled = false
+    void loadAssets().then((a) => {
+      if (cancelled) return
+      assetsRef.current = a
+      setReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // The menu sits on top of a paused, live scene.
+  useEffect(() => {
+    if (!ready) return
     refreshSaves()
     start('demo')
     return stop
-  }, [refreshSaves, start, stop])
+  }, [ready, refreshSaves, start, stop])
 
   const toMenu = () => {
     runtime.current?.game.save.save('exit')
@@ -217,38 +236,40 @@ export function GameShell() {
       )}
 
       {screen === 'menu' && (
-        <Overlay>
-          <p className="m-0 text-xs font-bold tracking-widest text-amber-300/80 uppercase">
-            Steppe survival · kingdom building
-          </p>
-          <h1 className="m-0 mt-2 font-display text-5xl font-extrabold text-amber-100 sm:text-6xl">
-            Монгол хаант улс
-          </h1>
-          <p className="mt-3 max-w-md text-base text-amber-100/80">
-            Ride out from a single ger. Gather coins, recruit your people, raise
-            walls and towers, and hold the steppe through every night.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button className={btnPrimary} onClick={() => start('new')}>
-              New Game
-            </button>
-            {hasSave && (
-              <button className={btnGhost} onClick={() => start('continue')}>
-                Continue
+        <div
+          className="absolute inset-0 bg-stone-950 bg-cover bg-center"
+          style={{ backgroundImage: `url(${coverUrl})` }}
+        >
+          <div className="absolute inset-0 bg-linear-to-t from-stone-950 via-stone-950/55 to-transparent" />
+          <div className="relative flex h-full flex-col items-center justify-end p-6 pb-8 text-center">
+            <p className="m-0 text-xs font-bold tracking-widest text-amber-300/90 uppercase">
+              Steppe survival · kingdom building
+            </p>
+            <h1 className="m-0 mt-2 font-display text-5xl font-bold text-amber-100 drop-shadow-lg sm:text-7xl">
+              Монгол хаант улс
+            </h1>
+            <p className="mt-3 max-w-lg text-base text-amber-50/85">
+              Ride out from a single ger. Gather coins, recruit your people,
+              raise walls and towers, and hold the steppe through every night.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button className={btnPrimary} onClick={() => start('new')}>
+                New Game
               </button>
-            )}
+              {hasSave && (
+                <button className={btnGhost} onClick={() => start('continue')}>
+                  Continue
+                </button>
+              )}
+            </div>
+            <p className="mt-5 text-sm text-amber-100/70">
+              <b className="text-amber-200">A D / ← →</b> ride ·{' '}
+              <b className="text-amber-200">Shift</b> gallop ·{' '}
+              <b className="text-amber-200">E / ↓ / Space</b> act ·{' '}
+              <b className="text-amber-200">P</b> pause
+            </p>
           </div>
-          <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-left text-sm text-amber-100/75">
-            <dt className="font-bold text-amber-200">← → / A D</dt>
-            <dd className="m-0">Ride left / right</dd>
-            <dt className="font-bold text-amber-200">Shift</dt>
-            <dd className="m-0">Gallop (uses stamina)</dd>
-            <dt className="font-bold text-amber-200">E / ↓ / Space</dt>
-            <dd className="m-0">Recruit, build, assign tools</dd>
-            <dt className="font-bold text-amber-200">P / Esc</dt>
-            <dd className="m-0">Pause</dd>
-          </dl>
-        </Overlay>
+        </div>
       )}
 
       {screen === 'playing' && paused && (
