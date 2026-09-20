@@ -14,3 +14,323 @@ body,
   background: #120d08;
   overflow: hidden;
 }
+
+button {
+  touch-action: manipulation;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.menu-scene {
+  background-size: cover;
+  background-position: center;
+  isolation: isolate;
+}
+.menu-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(6, 13, 32, 0.93) 0%,
+      rgba(7, 15, 36, 0.74) 35%,
+      rgba(9, 19, 43, 0.27) 68%,
+      rgba(9, 17, 35, 0.1) 100%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(3, 8, 21, 0.8),
+      transparent 35%,
+      rgba(5, 11, 30, 0.1)
+    );
+}
+.menu-content {
+  position: absolute;
+  z-index: 2;
+  top: 48%;
+  left: clamp(24px, 7vw, 120px);
+  width: min(42vw, 610px);
+  transform: translateY(-50%);
+}
+.menu-emblem {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 24px;
+  color: #f4c765;
+  font-size: 30px;
+  border: 1px solid rgba(243, 198, 113, 0.62);
+  border-radius: 50%;
+  box-shadow: 0 0 35px rgba(238, 166, 66, 0.15);
+}
+.menu-kicker {
+  margin: 0 0 12px;
+  color: #e8c489;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.menu-title {
+  max-width: 610px;
+  margin: 0;
+  color: #fff0d1;
+  font-family: var(--font-display);
+  font-size: clamp(54px, 6vw, 104px);
+  font-weight: 700;
+  line-height: 0.94;
+  text-shadow:
+    0 5px 0 #14203a,
+    0 18px 40px rgba(0, 0, 0, 0.6);
+}
+.menu-blurb {
+  max-width: 510px;
+  margin: 28px 0 0;
+  color: #e8e4db;
+  font-size: clamp(14px, 1.2vw, 17px);
+  line-height: 1.75;
+  text-shadow: 0 2px 7px #071126;
+}
+.menu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+.menu-actions button {
+  min-height: 51px;
+  box-shadow:
+    0 6px 0 rgba(6, 13, 30, 0.5),
+    0 16px 35px rgba(0, 0, 0, 0.24);
+}
+.menu-rule {
+  width: 100%;
+  height: 1px;
+  margin-top: 40px;
+  background: linear-gradient(90deg, rgba(230, 190, 123, 0.5), transparent);
+}
+.menu-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0 0;
+  color: #c4cce0;
+  font-size: 12px;
+}
+.menu-controls kbd {
+  padding: 4px 7px;
+  border: 1px solid rgba(223, 230, 250, 0.35);
+  border-radius: 3px;
+  color: #ffe0a6;
+  background: rgba(11, 20, 43, 0.73);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+.menu-controls span {
+  color: #a0a9bc;
+}
+.menu-loading {
+  color: #ffd493;
+  font-size: 13px;
+}
+.menu-hero {
+  position: absolute;
+  z-index: 1;
+  right: 1vw;
+  bottom: 20vh;
+  width: min(56vw, 840px);
+  max-height: 75vh;
+  object-fit: contain;
+  filter: drop-shadow(0 25px 22px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+.keyboard-dock,
+.game-utility {
+  position: absolute;
+  z-index: 2;
+  bottom: 24px;
+  display: flex;
+  gap: 8px;
+}
+.keyboard-dock {
+  left: 28px;
+}
+.game-utility {
+  right: 28px;
+}
+.control-tile {
+  display: grid;
+  grid-template-rows: 30px 18px 18px;
+  place-items: center;
+  min-width: 77px;
+  padding: 5px 8px 7px;
+  border: 1px solid rgba(239, 216, 173, 0.37);
+  border-radius: 5px;
+  background: rgba(11, 17, 33, 0.82);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.35);
+  color: #d4d3d0;
+  font-size: 11px;
+  backdrop-filter: blur(5px);
+}
+.control-tile-active {
+  border-color: #e4b870;
+  color: #ffe1a1;
+}
+.control-symbol {
+  color: #f0cc89;
+  font-size: 27px;
+  line-height: 1;
+}
+.control-tile kbd {
+  color: #faf2e4;
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+.utility-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 48px;
+  min-height: 43px;
+  padding: 7px 12px;
+  border: 1px solid rgba(239, 216, 173, 0.38);
+  border-radius: 4px;
+  background: rgba(11, 17, 33, 0.82);
+  color: #ffe5b2;
+  cursor: pointer;
+  font-size: 19px;
+  backdrop-filter: blur(5px);
+}
+.utility-button:hover,
+.utility-button:focus-visible {
+  border-color: #efc475;
+  background: rgba(30, 39, 65, 0.95);
+}
+.utility-label {
+  font-size: 11px;
+}
+.touch-dock {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .menu-content {
+    left: 7vw;
+    width: min(72vw, 580px);
+  }
+  .menu-hero {
+    right: -15vw;
+    width: 75vw;
+    opacity: 0.55;
+  }
+  .menu-vignette {
+    background:
+      linear-gradient(90deg, rgba(6, 13, 32, 0.94), rgba(7, 15, 36, 0.55) 80%),
+      linear-gradient(0deg, rgba(3, 8, 21, 0.8), transparent 45%);
+  }
+  .utility-label {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .menu-content {
+    top: auto;
+    bottom: 24px;
+    left: 7vw;
+    width: 86vw;
+    transform: none;
+  }
+  .menu-emblem {
+    width: 38px;
+    height: 38px;
+    margin-bottom: 12px;
+    font-size: 23px;
+  }
+  .menu-kicker {
+    font-size: 10px;
+  }
+  .menu-title {
+    font-size: clamp(43px, 12vw, 72px);
+  }
+  .menu-blurb {
+    margin-top: 13px;
+    line-height: 1.5;
+  }
+  .menu-actions {
+    margin-top: 20px;
+  }
+  .menu-rule {
+    margin-top: 20px;
+  }
+  .menu-controls {
+    font-size: 10px;
+  }
+  .menu-hero {
+    right: -15vw;
+    bottom: 27vh;
+    width: 100vw;
+    max-height: 49vh;
+    opacity: 0.63;
+  }
+  .game-utility {
+    right: 12px;
+    bottom: 108px;
+  }
+  .keyboard-dock {
+    left: 12px;
+    bottom: 14px;
+  }
+  .control-tile {
+    min-width: 58px;
+  }
+}
+@media (pointer: coarse) {
+  .keyboard-dock {
+    display: none;
+  }
+  .touch-dock {
+    position: absolute;
+    z-index: 3;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: end;
+    touch-action: none;
+  }
+  .touch-button {
+    width: 60px;
+    height: 60px;
+    border: 2px solid rgba(243, 201, 128, 0.75);
+    border-radius: 12px;
+    background: rgba(11, 17, 33, 0.83);
+    color: #ffe4ad;
+    font-family: var(--font-display);
+    font-size: 32px;
+    touch-action: none;
+    user-select: none;
+  }
+  .touch-button:active {
+    background: rgba(165, 110, 48, 0.85);
+  }
+  .touch-action {
+    margin-left: auto;
+    width: 74px;
+    height: 74px;
+    border-color: #f4ca7b;
+    font-size: 39px;
+  }
+  .game-utility {
+    bottom: auto;
+    top: 75px;
+    right: 12px;
+  }
+}

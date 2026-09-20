@@ -120,7 +120,7 @@ function text(
 /** Minimal HUD: coins top-left, day/night indicator top-centre, contextual prompts. */
 export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   const { state, ui, config } = game
-  const u = o.ps
+  const u = Math.min(o.ps, Math.max(1, Math.floor(o.W / 240)))
   const fs = 8 * u
   g.save()
 
@@ -167,10 +167,10 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
       '#ff9b8a',
     )
 
-  // --- day / night indicator (top-centre)
+  // --- day / night indicator (top-right)
   const night = state.currentPhase === 'Night'
   const pw = 100 * u
-  const px0 = Math.round(o.W / 2 - pw / 2)
+  const px0 = o.W - pw - 6 * u
   panel(g, px0, cy, pw, 15 * u, u, night ? '#7f8fd8' : '#c9a24a')
   bitmap(
     g,
@@ -237,8 +237,16 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
     const alive = state.enemies.filter(isAlive).length + state.wave.queue.length
     const ew = 52 * u
     const ex = o.W - ew - 6 * u
-    panel(g, ex, cy, ew, 15 * u, u, '#d9534f')
-    text(g, mn.raiders(alive), ex + ew / 2, cy + 8 * u, fs, '#ffd2c8', 'center')
+    panel(g, ex, cy + 24 * u, ew, 15 * u, u, '#d9534f')
+    text(
+      g,
+      mn.raiders(alive),
+      ex + ew / 2,
+      cy + 32 * u,
+      fs,
+      '#ffd2c8',
+      'center',
+    )
   }
 
   // --- toasts
@@ -284,9 +292,9 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   // --- contextual prompt above the interactive object
   if (ui.prompt) {
     const p = ui.prompt
-    const sx = Math.round((p.x - o.camX + o.bw / 2) * u)
+    const sx = Math.round((p.x - o.camX + o.bw / 2) * o.ps)
     const sy = Math.round(
-      (o.groundY - 104) * u + Math.sin(performance.now() / 260) * u,
+      (o.groundY - 104) * o.ps + Math.sin(performance.now() / 260) * u,
     )
     g.font = `600 ${8 * u}px ${FONT}`
     const tw = Math.ceil(g.measureText(p.text).width)
@@ -313,21 +321,6 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
       8 * u,
       p.state === 'ok' ? '#fff3cf' : p.state === 'poor' ? '#ffc4b8' : '#cfd3dc',
     )
-  }
-
-  // --- controls hint on the first day
-  if (
-    state.currentDay === 1 &&
-    ui.hintTime < 40 &&
-    state.status === 'playing'
-  ) {
-    const msg = mn.controlsHint
-    g.globalAlpha = Math.min(1, (40 - ui.hintTime) / 4)
-    g.font = `600 ${7 * u}px ${FONT}`
-    const w = Math.ceil(g.measureText(msg).width) + 14 * u
-    panel(g, Math.round(o.W / 2 - w / 2), o.H - 22 * u, w, 13 * u, u, '#6b5a3a')
-    text(g, msg, o.W / 2, o.H - 15 * u, 7 * u, '#f4ead2', 'center')
-    g.globalAlpha = 1
   }
 
   if (o.debug) {

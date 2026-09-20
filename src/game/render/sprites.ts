@@ -200,13 +200,35 @@ export function drawPerson(
 // -------------------------------------------------------------------- hero
 
 export interface Assets {
+  day: HTMLImageElement
+  night: HTMLImageElement
   hero: HTMLImageElement
+  raider: HTMLImageElement
+  ger: HTMLImageElement
+  tower: HTMLImageElement
+  wall: HTMLImageElement
+  banner: HTMLImageElement
 }
 
-export const HERO_CELL_W = 88
-export const HERO_CELL_H = 92
+/** Draw an isolated sprite with its feet aligned to the world's ground line. */
+export function drawCutout(
+  g: G,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  crop: readonly [number, number, number, number],
+  facing: 1 | -1 = 1,
+): void {
+  g.save()
+  g.translate(Math.round(x), Math.round(y))
+  g.scale(facing, 1)
+  g.drawImage(img, ...crop, -width / 2, -height, width, height)
+  g.restore()
+}
 
-/** Mounted archer from the character sheet (atlas rows: idle, walk, run, attack). */
+/** The reference archer is a single cutout; a small bob keeps riding readable. */
 export function drawHero(
   g: G,
   assets: Assets,
@@ -217,25 +239,12 @@ export function drawHero(
   speed01: number,
   sprinting: boolean,
 ): void {
-  const row = speed01 < 0.06 ? 0 : sprinting ? 2 : 1
-  const fps = row === 0 ? 3.5 : row === 1 ? 7 : 11
-  const col = Math.floor(t * fps) % 4
-  g.save()
-  g.translate(Math.round(x), Math.round(y))
-  g.scale(facing, 1)
-  px(g, 'rgba(0,0,0,0.3)', -26, -2, 52, 3)
-  g.drawImage(
-    assets.hero,
-    col * HERO_CELL_W,
-    row * HERO_CELL_H,
-    HERO_CELL_W,
-    HERO_CELL_H,
-    -HERO_CELL_W / 2,
-    -HERO_CELL_H + 2,
-    HERO_CELL_W,
-    HERO_CELL_H,
-  )
-  g.restore()
+  const moving = speed01 > 0.06
+  const bob = moving
+    ? Math.sin(t * (sprinting ? 19 : 12)) * (sprinting ? 2 : 1)
+    : 0
+  px(g, 'rgba(0,0,0,0.3)', x - 26, y - 2, 52, 3)
+  drawCutout(g, assets.hero, x, y + bob, 108, 78, [90, 48, 1290, 910], facing)
 }
 
 // ------------------------------------------------------------------ banner

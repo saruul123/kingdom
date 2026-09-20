@@ -6,7 +6,8 @@ import { KeyboardInput } from './input/Input'
 import { loadAssets } from './render/assets'
 import { Renderer } from './render/Renderer'
 import type { Assets } from './render/sprites'
-import coverUrl from '../assests/cover.png'
+import menuBackgroundUrl from '../assests/backgrounds/steppe-night.png'
+import menuHeroUrl from '../assests/sprites/mounted-archer.png'
 import { SaveStore } from './systems/SaveSystem'
 import { AudioManager } from './ui/AudioManager'
 
@@ -44,6 +45,7 @@ export function GameShell() {
   const runtime = useRef<Runtime | null>(null)
   const assetsRef = useRef<Assets | null>(null)
   const [ready, setReady] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [screen, setScreen] = useState<Screen>('menu')
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -110,6 +112,7 @@ export function GameShell() {
       })
       const pause = () => {
         if (game.state.status !== 'playing') return
+        input.releaseTouchControls()
         game.paused = !game.paused
         setPaused(game.paused)
       }
@@ -171,11 +174,15 @@ export function GameShell() {
 
   useEffect(() => {
     let cancelled = false
-    void loadAssets().then((a) => {
-      if (cancelled) return
-      assetsRef.current = a
-      setReady(true)
-    })
+    void loadAssets()
+      .then((a) => {
+        if (cancelled) return
+        assetsRef.current = a
+        setReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
     return () => {
       cancelled = true
     }
@@ -209,66 +216,151 @@ export function GameShell() {
     setPaused(false)
   }
 
+  const hold = (control: 'left' | 'right' | 'sprint', pressed: boolean) => {
+    runtime.current?.input.setTouchControl(control, pressed)
+  }
+
   return (
-    <div className="relative h-dvh w-screen overflow-hidden bg-stone-950 font-sans text-amber-50 select-none">
+    <div className="game-shell relative h-dvh w-screen overflow-hidden bg-stone-950 font-sans text-amber-50 select-none">
       <canvas ref={canvasRef} className="block h-full w-full" />
 
       {screen === 'playing' && (
-        <div className="absolute bottom-3 left-3 flex gap-2">
-          <button
-            className={`${btnGhost} px-3 py-1 text-xs`}
-            onClick={toggleMute}
-          >
-            {mn.sound(muted)}
-          </button>
-          <button
-            className={`${btnGhost} px-3 py-1 text-xs`}
-            onClick={() => {
-              const rt = runtime.current
-              if (rt) {
-                rt.game.paused = true
-                setPaused(true)
-              }
-            }}
-          >
-            {mn.pause.button}
-          </button>
-        </div>
+        <>
+          <div className="game-utility" aria-label="Тоглоомын тохиргоо">
+            <button
+              className="utility-button"
+              onClick={toggleMute}
+              aria-label={mn.sound(muted)}
+              title={mn.sound(muted)}
+            >
+              {muted ? '♪̸' : '♪'}
+              <span className="utility-label">{muted ? 'Дуугүй' : 'Дуу'}</span>
+            </button>
+            <button
+              className="utility-button"
+              onClick={() => {
+                const rt = runtime.current
+                if (rt) {
+                  rt.input.releaseTouchControls()
+                  rt.game.paused = true
+                  setPaused(true)
+                }
+              }}
+              aria-label={mn.pause.button}
+              title={mn.pause.button}
+            >
+              Ⅱ<span className="utility-label">{mn.pause.button}</span>
+            </button>
+          </div>
+          {!paused && (
+            <>
+              <div className="keyboard-dock" aria-label="Удирдлага">
+                <div className="control-tile">
+                  <span className="control-symbol">↔</span>
+                  <kbd>A / D</kbd>
+                  <span>{mn.controlsShort.ride}</span>
+                </div>
+                <div className="control-tile">
+                  <span className="control-symbol">»</span>
+                  <kbd>SHIFT</kbd>
+                  <span>{mn.controlsShort.gallop}</span>
+                </div>
+                <div className="control-tile control-tile-active">
+                  <span className="control-symbol">✦</span>
+                  <kbd>E</kbd>
+                  <span>{mn.controlsShort.act}</span>
+                </div>
+              </div>
+              <div className="touch-dock" aria-label="Дэлгэцийн удирдлага">
+                {(['left', 'right', 'sprint'] as const).map((control) => (
+                  <button
+                    key={control}
+                    className="touch-button"
+                    aria-label={
+                      control === 'left'
+                        ? 'Зүүн тийш'
+                        : control === 'right'
+                          ? 'Баруун тийш'
+                          : 'Хурдлах'
+                    }
+                    onPointerDown={(e) => {
+                      e.preventDefault()
+                      e.currentTarget.setPointerCapture(e.pointerId)
+                      hold(control, true)
+                    }}
+                    onPointerUp={() => hold(control, false)}
+                    onPointerCancel={() => hold(control, false)}
+                    onLostPointerCapture={() => hold(control, false)}
+                  >
+                    {control === 'left' ? '←' : control === 'right' ? '→' : '»'}
+                  </button>
+                ))}
+                <button
+                  className="touch-button touch-action"
+                  aria-label="Үйлдэл"
+                  onPointerDown={(e) => {
+                    e.preventDefault()
+                    runtime.current?.input.pressInteract()
+                  }}
+                >
+                  ✦
+                </button>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       {screen === 'menu' && (
         <div
-          className="absolute inset-0 bg-stone-950 bg-cover bg-center"
-          style={{ backgroundImage: `url(${coverUrl})` }}
+          className="menu-scene absolute inset-0"
+          style={{ backgroundImage: `url(${menuBackgroundUrl})` }}
         >
-          <div className="absolute inset-0 bg-linear-to-t from-stone-950 via-stone-950/55 to-transparent" />
-          <div className="relative flex h-full flex-col items-center justify-end p-6 pb-8 text-center">
-            <p className="m-0 text-xs font-bold tracking-widest text-amber-300/90 uppercase">
-              {mn.menu.kicker}
-            </p>
-            <h1 className="m-0 mt-2 font-display text-5xl font-bold text-amber-100 drop-shadow-lg sm:text-7xl">
-              {mn.title}
-            </h1>
-            <p className="mt-3 max-w-lg text-base text-amber-50/85">
-              {mn.menu.blurb}
-            </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
-              <button className={btnPrimary} onClick={() => start('new')}>
+          <div className="menu-vignette" />
+          <img
+            className="menu-hero"
+            src={menuHeroUrl}
+            alt="Нум агссан морьтон"
+          />
+          <div className="menu-content">
+            <div className="menu-emblem" aria-hidden="true">
+              ✦
+            </div>
+            <p className="menu-kicker">{mn.menu.kicker}</p>
+            <h1 className="menu-title">{mn.title}</h1>
+            <p className="menu-blurb">{mn.menu.blurb}</p>
+            <div className="menu-actions">
+              <button
+                className={btnPrimary}
+                onClick={() => start('new')}
+                disabled={!ready}
+              >
                 {mn.menu.newGame}
               </button>
               {hasSave && (
-                <button className={btnGhost} onClick={() => start('continue')}>
+                <button
+                  className={btnGhost}
+                  onClick={() => start('continue')}
+                  disabled={!ready}
+                >
                   {mn.menu.continue}
                 </button>
               )}
             </div>
-            <p className="mt-5 text-sm text-amber-100/70">
-              <b className="text-amber-200">A D / ← →</b>{' '}
-              {mn.controlsShort.ride} · <b className="text-amber-200">Shift</b>{' '}
-              {mn.controlsShort.gallop} ·{' '}
-              <b className="text-amber-200">E / ↓ / {mn.controlsShort.space}</b>{' '}
-              {mn.controlsShort.act} · <b className="text-amber-200">P</b>{' '}
-              {mn.controlsShort.pause}
+            {!ready && (
+              <p className="menu-loading" role="status">
+                {loadError
+                  ? 'Зураг ачаалагдсангүй. Хуудсыг дахин ачаална уу.'
+                  : 'Тоглоом ачаалж байна…'}
+              </p>
+            )}
+            <div className="menu-rule" />
+            <p className="menu-controls">
+              <kbd>A / D</kbd> {mn.controlsShort.ride}
+              <span>·</span>
+              <kbd>SHIFT</kbd> {mn.controlsShort.gallop}
+              <span>·</span>
+              <kbd>E</kbd> {mn.controlsShort.act}
             </p>
           </div>
         </div>

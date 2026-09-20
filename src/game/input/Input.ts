@@ -13,11 +13,41 @@ const INTERACT = new Set(['e', 'E', ' ', 'ArrowDown', 's', 'S'])
 const PAUSE = new Set(['p', 'P', 'Escape'])
 
 export class KeyboardInput implements InputSource {
-  left = false
-  right = false
-  sprint = false
+  private keyLeft = false
+  private keyRight = false
+  private keySprint = false
+  private touchLeft = false
+  private touchRight = false
+  private touchSprint = false
   onPause: (() => void) | null = null
   private interact = false
+
+  get left(): boolean {
+    return this.keyLeft || this.touchLeft
+  }
+  get right(): boolean {
+    return this.keyRight || this.touchRight
+  }
+  get sprint(): boolean {
+    return this.keySprint || this.touchSprint
+  }
+
+  setTouchControl(
+    control: 'left' | 'right' | 'sprint',
+    pressed: boolean,
+  ): void {
+    if (control === 'left') this.touchLeft = pressed
+    else if (control === 'right') this.touchRight = pressed
+    else this.touchSprint = pressed
+  }
+
+  pressInteract(): void {
+    this.interact = true
+  }
+
+  releaseTouchControls(): void {
+    this.touchLeft = this.touchRight = this.touchSprint = false
+  }
 
   constructor(private target: Window) {
     target.addEventListener('keydown', this.down)
@@ -38,14 +68,15 @@ export class KeyboardInput implements InputSource {
   }
 
   private reset = () => {
-    this.left = this.right = this.sprint = this.interact = false
+    this.keyLeft = this.keyRight = this.keySprint = this.interact = false
+    this.releaseTouchControls()
   }
 
   private down = (e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return
-    if (LEFT.has(e.key)) this.left = true
-    else if (RIGHT.has(e.key)) this.right = true
-    else if (e.key === 'Shift') this.sprint = true
+    if (LEFT.has(e.key)) this.keyLeft = true
+    else if (RIGHT.has(e.key)) this.keyRight = true
+    else if (e.key === 'Shift') this.keySprint = true
     else if (INTERACT.has(e.key)) {
       if (!e.repeat) this.interact = true
     } else if (PAUSE.has(e.key)) {
@@ -55,9 +86,9 @@ export class KeyboardInput implements InputSource {
   }
 
   private up = (e: KeyboardEvent) => {
-    if (LEFT.has(e.key)) this.left = false
-    else if (RIGHT.has(e.key)) this.right = false
-    else if (e.key === 'Shift') this.sprint = false
+    if (LEFT.has(e.key)) this.keyLeft = false
+    else if (RIGHT.has(e.key)) this.keyRight = false
+    else if (e.key === 'Shift') this.keySprint = false
   }
 }
 
