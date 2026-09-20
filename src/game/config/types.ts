@@ -58,6 +58,17 @@ export interface BuilderDef {
   criticalHealthRatio: number
 }
 
+export interface BuildingUpgradeDef {
+  label: string
+  cost: number
+  buildWork: number
+  maxHealth: number
+  /** Replaces the base tower capacity when set. */
+  archerCapacity?: number
+  /** Extra archer range (in addition to the tower bonus) for archers posted here. */
+  rangeBonus?: number
+}
+
 export interface BuildingDef {
   label: string
   category: BuildingCategory
@@ -68,6 +79,8 @@ export interface BuildingDef {
   height: number
   blocksEnemies: boolean
   archerCapacity: number
+  /** Successive upgrades: upgrades[0] takes the building from level 1 to 2. */
+  upgrades: BuildingUpgradeDef[]
 }
 
 export interface EnemyDef {
@@ -78,6 +91,8 @@ export interface EnemyDef {
   attackRange: number
   attackCooldown: number
   heroAggroRange: number
+  /** Chance that a defeated raider drops a coin. */
+  coinDropChance: number
   targetPriority: TargetCategory[]
 }
 

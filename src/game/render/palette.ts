@@ -38,7 +38,7 @@ export function tri(w: Tod, day: string, dusk: string, night: string): string {
 
 /** Sky colour stops, top → horizon. */
 export const SKY = {
-  day: ['#2f6fc4', '#4f93d8', '#8fc3ea', '#d9eef6'],
+  day: ['#6d9bd6', '#93bce4', '#bcd9ef', '#e6f1f6'],
   dusk: ['#2a2a66', '#6c4a8e', '#dc7a8a', '#f8b46a'],
   night: ['#060a20', '#0e1846', '#262f6b', '#6d4f8c'],
 } as const

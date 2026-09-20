@@ -8,7 +8,8 @@
     "width": 124,
     "height": 86,
     "blocksEnemies": false,
-    "archerCapacity": 0
+    "archerCapacity": 0,
+    "upgrades": []
   },
   "wall": {
     "label": "Модон хашаа",
@@ -19,7 +20,15 @@
     "width": 16,
     "height": 56,
     "blocksEnemies": true,
-    "archerCapacity": 0
+    "archerCapacity": 0,
+    "upgrades": [
+      {
+        "label": "Бэхжүүлсэн хашаа",
+        "cost": 6,
+        "buildWork": 8,
+        "maxHealth": 280
+      }
+    ]
   },
   "tower": {
     "label": "Харвах цамхаг",
@@ -30,6 +39,16 @@
     "width": 30,
     "height": 88,
     "blocksEnemies": false,
-    "archerCapacity": 2
+    "archerCapacity": 2,
+    "upgrades": [
+      {
+        "label": "Бэхжүүлсэн цамхаг",
+        "cost": 10,
+        "buildWork": 12,
+        "maxHealth": 320,
+        "archerCapacity": 3,
+        "rangeBonus": 70
+      }
+    ]
   }
 }

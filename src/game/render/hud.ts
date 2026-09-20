@@ -1,13 +1,16 @@
 import type { GameManager } from '../GameManager'
 import type { ToastKind } from '../core/events'
-import { isAlive } from '../core/lookup'
 import { bitmap } from './pixel'
 import type { G } from './pixel'
 import { mn } from '../i18n'
-
-const FONT =
-  "'Pixelify Sans', 'Press Start 2P', ui-monospace, 'Courier New', monospace"
-const DISPLAY = "'Pixelify Sans', ui-monospace, monospace"
+import { DISPLAY, FONT, panel, text } from './hudKit'
+import {
+  drawFloats,
+  drawMinimap,
+  drawObjective,
+  drawPopulation,
+  drawThreats,
+} from './hudExtras'
 
 const TOAST_COLOR: Record<ToastKind, string> = {
   info: '#f4ead2',
@@ -76,45 +79,6 @@ export interface HudOptions {
   groundY: number
   debug: boolean
   fps: number
-}
-
-/** Stepped-corner panel: gold rim, dark navy fill. */
-function panel(
-  g: G,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  u: number,
-  rim: string,
-): void {
-  g.fillStyle = rim
-  g.fillRect(x + u, y, w - 2 * u, h)
-  g.fillRect(x, y + u, w, h - 2 * u)
-  g.fillStyle = 'rgba(14,18,44,0.9)'
-  g.fillRect(x + 2 * u, y + u, w - 4 * u, h - 2 * u)
-  g.fillRect(x + u, y + 2 * u, w - 2 * u, h - 4 * u)
-  g.fillStyle = 'rgba(255,255,255,0.08)'
-  g.fillRect(x + 2 * u, y + u, w - 4 * u, u)
-}
-
-function text(
-  g: G,
-  s: string,
-  x: number,
-  y: number,
-  size: number,
-  colour: string,
-  align: CanvasTextAlign = 'left',
-  font = FONT,
-): void {
-  g.font = `600 ${size}px ${font}`
-  g.textAlign = align
-  g.textBaseline = 'middle'
-  g.fillStyle = 'rgba(0,0,0,0.55)'
-  g.fillText(s, x + Math.max(1, size / 12), y + Math.max(1, size / 12))
-  g.fillStyle = colour
-  g.fillText(s, x, y)
 }
 
 /** Minimal HUD: coins top-left, day/night indicator top-centre, contextual prompts. */
@@ -232,25 +196,33 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
   const mx = bx + Math.round(bwid * Math.min(1, elapsed / total))
   g.fillRect(mx - u, by - u, 2 * u, 4 * u)
 
-  // --- raiders remaining (night)
-  if (night) {
-    const alive = state.enemies.filter(isAlive).length + state.wave.queue.length
-    const ew = 52 * u
+  // --- raiders: which side they come from (dusk warning, then the night's remainder)
+  if (state.currentPhase === 'Sunset' || night) {
+    const { left, right } = game.ctx.sys.waves.incoming()
+    const ew = 78 * u
     const ex = o.W - ew - 6 * u
     panel(g, ex, cy + 24 * u, ew, 15 * u, u, '#d9534f')
+    text(g, mn.raiders(left + right), ex + 5 * u, cy + 32 * u, fs, '#ffd2c8')
     text(
       g,
-      mn.raiders(alive),
-      ex + ew / 2,
+      mn.raidersSides(left, right),
+      ex + ew - 5 * u,
       cy + 32 * u,
-      fs,
-      '#ffd2c8',
-      'center',
+      6 * u,
+      '#ffb0a5',
+      'right',
     )
   }
 
+  // --- population, objective, map
+  drawPopulation(g, game, cx, cy + 24 * u, u)
+  drawObjective(g, game, o, cx, cy + 41 * u, u)
+  drawMinimap(g, game, o, u)
+  drawThreats(g, game, o, u)
+  drawFloats(g, game, o, u)
+
   // --- toasts
-  let ty = cy + 30 * u
+  let ty = cy + 36 * u
   for (const toast of ui.toasts) {
     const a = Math.max(
       0,
@@ -328,7 +300,7 @@ export function drawHud(g: G, game: GameManager, o: HudOptions): void {
       g,
       `fps ${o.fps.toFixed(0)} x=${state.hero.x.toFixed(0)} cit=${state.citizens.length} en=${state.enemies.length} bld=${state.buildings.length} ${state.currentPhase} ${state.timeRemaining.toFixed(0)}s ps=${u}`,
       6 * u,
-      cy + 26 * u,
+      o.H - 5 * u,
       6 * u,
       '#ffffff',
     )

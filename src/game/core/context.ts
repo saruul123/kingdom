@@ -50,11 +50,16 @@ export interface BuildingApi {
   claimTowerSlot: (archer: Citizen, preferredSide: Side) => Building | undefined
   releaseTowerSlot: (archer: Citizen) => void
   ger: () => Building | undefined
+  archerCapacity: (b: Building) => number
+  /** Extra archer range granted by this building's upgrade level. */
+  extraRange: (b: Building) => number
 }
 
 export interface ConstructionApi {
   work: (b: Building, seconds: number) => void
   repair: (b: Building, hp: number) => void
+  /** Builder work on a paid-for upgrade (seconds of work). */
+  upgrade: (b: Building, seconds: number) => void
 }
 
 export interface TerritoryApi {
@@ -65,6 +70,8 @@ export interface TerritoryApi {
 export interface WaveApi {
   /** True when the night's wave has fully spawned. */
   finishedSpawning: () => boolean
+  /** Raiders still to come (queued + alive) on each side of the settlement. */
+  incoming: () => { left: number; right: number }
 }
 
 export interface EnemyApi {

@@ -15,12 +15,12 @@ Add `?debug=1` to the URL for an FPS/state overlay, `window.__game`, and
 
 ## Controls
 
-| Key | Action |
-| --- | --- |
-| ← → / A D | Ride (давхих) |
-| Shift | Gallop (stamina) |
+| Key           | Action                                             |
+| ------------- | -------------------------------------------------- |
+| ← → / A D     | Ride (давхих)                                      |
+| Shift         | Gallop (stamina)                                   |
 | E / ↓ / Space | Recruit, build, make Archer/Builder at a tool rack |
-| P / Esc | Pause |
+| P / Esc       | Pause                                              |
 
 ## Status
 
@@ -29,6 +29,16 @@ explore → coins → recruit → Archer/Builder → wall & tower → sunset →
 archers defend, builders repair → sunrise. Autosave at every sunrise and on exit;
 game over when the banner leaves your territory or the Central Ger falls.
 Phases 6–9 (horsemen, territory, trade, boss nights…) are not started.
+
+## Gameplay systems beyond the core loop
+
+- **Upgrades:** walls and towers can be upgraded once (data in `config/buildings.json` → `upgrades`);
+  builders do the work. Upgraded towers hold 3 archers and shoot further.
+- **Raid warning:** the night's wave is planned at dusk; the HUD shows how many raiders come from each side,
+  and off-screen raiders get edge arrows at night.
+- **Loot:** raiders may drop a coin (`coinDropChance` in `config/enemies.json`).
+- **UX:** next-step objective with a pointer, population panel, fog-of-war map (fills in as you explore),
+  floating `+N` / `-N`, hold the action key to repeat, auto-pause when the tab is hidden, remembered mute.
 
 ## Layout (`src/game`)
 
@@ -39,9 +49,12 @@ Phases 6–9 (horsemen, territory, trade, boss nights…) are not started.
   interfaces (`core/context.ts`) and the event bus, never via `GameManager`.
 - `ai/` — state machines for archers, builders, citizens and enemies.
 - `render/` + `ui/` — pixel-art canvas renderer (low-res buffer, nearest-neighbour upscale), HUD, audio. Reads state only.
+  The look is deliberately plain for readability: flat low-contrast backdrop, a 1px dark outline on every sprite,
+  coloured discs under units (allies green, raiders red, neutrals white, hero gold) and job badges on workers.
   Hero sprites come from `src/assests/model.png` via `scripts/extract-hero-sprites.py` → `src/assests/sprites/hero.png`;
   `cover.png` is the menu background; everything else is drawn procedurally in `render/sprites.ts` / `atmosphere.ts`.
 - `GameManager.ts` — composition root; `GameShell.tsx` — React menu/pause/game-over shell.
 
 State is JSON-serialisable, so saves are just `JSON.stringify(state)`.
+
 # kingdom

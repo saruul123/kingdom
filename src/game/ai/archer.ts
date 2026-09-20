@@ -23,9 +23,11 @@ function def(ctx: GameContext) {
 }
 
 function effectiveRange(u: Citizen, ctx: GameContext): number {
-  return (
-    def(ctx).range + (u.postBuildingId !== null ? def(ctx).towerRangeBonus : 0)
-  )
+  const tower = findById(ctx.state.buildings, u.postBuildingId)
+  const bonus = tower
+    ? def(ctx).towerRangeBonus + ctx.sys.buildings.extraRange(tower)
+    : 0
+  return def(ctx).range + bonus
 }
 
 /**
@@ -115,8 +117,8 @@ function shoot(
     x: u.x,
     y:
       tower && u.brain !== 'MoveToPost'
-        ? ctx.sys.buildings.heightOf(tower) - 8
-        : 14,
+        ? ctx.sys.buildings.heightOf(tower) + 26
+        : 26,
     target: { kind, id },
     damage: d.damage,
     speed: d.arrowSpeed,

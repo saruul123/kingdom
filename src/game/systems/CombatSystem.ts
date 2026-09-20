@@ -57,13 +57,13 @@ export class CombatSystem implements System, CombatApi {
   private aimPoint(t: Resolved): [number, number] {
     switch (t.kind) {
       case 'enemy':
-        return [t.entity.x, 12]
+        return [t.entity.x, 24]
       case 'animal':
-        return [t.entity.x, 5]
+        return [t.entity.x, 6]
       case 'citizen':
-        return [t.entity.x, 12]
+        return [t.entity.x, 24]
       case 'building':
-        return [t.entity.x, 18]
+        return [t.entity.x, 26]
       default:
         return [0, 0]
     }

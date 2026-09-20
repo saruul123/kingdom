@@ -1,7 +1,7 @@
 import type { GameConfig } from '../config'
 import type { GameState } from './types'
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 
 /** Blank state for a new game; WorldManager fills in the world itself. */
 export function newGameState(config: GameConfig, seed: number): GameState {
@@ -49,6 +49,7 @@ export function newGameState(config: GameConfig, seed: number): GameState {
     projectiles: [],
     camps: [],
     ovoos: [],
+    explored: { min: -400, max: 400 },
     wave: { night: 0, elapsed: 0, queue: [], total: 0 },
     stats: {
       enemiesKilled: 0,

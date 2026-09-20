@@ -11,6 +11,8 @@ const LEFT = new Set(['ArrowLeft', 'a', 'A'])
 const RIGHT = new Set(['ArrowRight', 'd', 'D'])
 const INTERACT = new Set(['e', 'E', ' ', 'ArrowDown', 's', 'S'])
 const PAUSE = new Set(['p', 'P', 'Escape'])
+const REPEAT_DELAY = 450
+const REPEAT_INTERVAL = 280
 
 export class KeyboardInput implements InputSource {
   private keyLeft = false
@@ -21,6 +23,9 @@ export class KeyboardInput implements InputSource {
   private touchSprint = false
   onPause: (() => void) | null = null
   private interact = false
+  /** Holding the action key repeats it (recruit several people, buy several tools). */
+  private interactHeld = false
+  private nextRepeat = 0
 
   get left(): boolean {
     return this.keyLeft || this.touchLeft
@@ -43,6 +48,12 @@ export class KeyboardInput implements InputSource {
 
   pressInteract(): void {
     this.interact = true
+    this.interactHeld = true
+    this.nextRepeat = performance.now() + REPEAT_DELAY
+  }
+
+  releaseInteract(): void {
+    this.interactHeld = false
   }
 
   releaseTouchControls(): void {
@@ -56,9 +67,15 @@ export class KeyboardInput implements InputSource {
   }
 
   consumeInteract(): boolean {
-    const v = this.interact
-    this.interact = false
-    return v
+    if (this.interact) {
+      this.interact = false
+      return true
+    }
+    if (this.interactHeld && performance.now() >= this.nextRepeat) {
+      this.nextRepeat = performance.now() + REPEAT_INTERVAL
+      return true
+    }
+    return false
   }
 
   dispose(): void {
@@ -69,6 +86,7 @@ export class KeyboardInput implements InputSource {
 
   private reset = () => {
     this.keyLeft = this.keyRight = this.keySprint = this.interact = false
+    this.interactHeld = false
     this.releaseTouchControls()
   }
 
@@ -78,7 +96,7 @@ export class KeyboardInput implements InputSource {
     else if (RIGHT.has(e.key)) this.keyRight = true
     else if (e.key === 'Shift') this.keySprint = true
     else if (INTERACT.has(e.key)) {
-      if (!e.repeat) this.interact = true
+      if (!e.repeat) this.pressInteract()
     } else if (PAUSE.has(e.key)) {
       if (!e.repeat) this.onPause?.()
     } else return
@@ -89,6 +107,7 @@ export class KeyboardInput implements InputSource {
     if (LEFT.has(e.key)) this.keyLeft = false
     else if (RIGHT.has(e.key)) this.keyRight = false
     else if (e.key === 'Shift') this.keySprint = false
+    else if (INTERACT.has(e.key)) this.releaseInteract()
   }
 }
 

@@ -92,6 +92,10 @@ export interface Building {
   state: BuildingState
   buildPointId: string | null
   occupants: number[]
+  /** An upgrade has been paid for and builders are working on it. */
+  upgrading: boolean
+  /** 0..1 progress of the current upgrade. */
+  upgradeProgress: number
   /** Seconds since last damage (used for visual flash). */
   hitFlash: number
 }
@@ -222,6 +226,8 @@ export interface GameState {
   projectiles: Projectile[]
   camps: Camp[]
   ovoos: Ovoo[]
+  /** Extent of the steppe the hero has seen (drives the map's fog of war). */
+  explored: { min: number; max: number }
   wave: WaveState
   stats: Stats
   /** Real time the player has spent in this save. */

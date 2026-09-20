@@ -22,6 +22,7 @@ export class PlayerController implements System {
 
   update(dt: number): void {
     this.move(dt)
+    this.explore()
     this.pickupBanner(dt)
     this.updateInteraction()
   }
@@ -54,6 +55,14 @@ export class PlayerController implements System {
       h.vx = 0
     // Wait until the horse has actually turned before mirroring the artwork.
     if (Math.abs(h.vx) > 8) h.facing = h.vx > 0 ? 1 : -1
+  }
+
+  /** Reveal the steppe around the hero on the map. */
+  private explore(): void {
+    const { state } = this.ctx
+    const seen = 380
+    state.explored.min = Math.min(state.explored.min, state.hero.x - seen)
+    state.explored.max = Math.max(state.explored.max, state.hero.x + seen)
   }
 
   private pickupBanner(dt: number): void {
@@ -113,6 +122,14 @@ export class PlayerController implements System {
         bus.emit('toast', { text: mn.notEnoughCoins, kind: 'warning' })
       return
     }
+    const before = state.coins
     best.execute()
+    if (state.coins < before) {
+      bus.emit('float', {
+        x: best.x,
+        text: `-${before - state.coins}`,
+        kind: 'spend',
+      })
+    }
   }
 }

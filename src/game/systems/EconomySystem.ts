@@ -20,6 +20,7 @@ export class EconomySystem implements System, EconomyApi {
         state.stats.coinsCollected += c.amount
         bus.emit('coinsChanged', { coins: state.coins, delta: c.amount })
         bus.emit('sfx', { name: 'coin' })
+        bus.emit('float', { x: hero.x, text: `+${c.amount}`, kind: 'gain' })
       }
     }
   }

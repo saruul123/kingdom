@@ -47,6 +47,9 @@ export class DamageSystem implements System, DamageApi {
     }
     bus.emit('enemyKilled', { id: e.id, x: e.x })
     bus.emit('sfx', { name: 'kill' })
+    const chance = this.ctx.config.enemies[e.type].coinDropChance
+    if (this.ctx.rng.chance(chance))
+      this.ctx.sys.economy.dropCoins(e.x, 1, 'dropped')
   }
 
   damageBuilding(id: number, amount: number): void {
@@ -107,6 +110,7 @@ export class DamageSystem implements System, DamageApi {
     if (lost > 0) {
       sys.economy.dropCoins(hero.x, lost, 'dropped')
       bus.emit('heroHit', { coinsLost: lost })
+      bus.emit('float', { x: hero.x, text: `-${lost}`, kind: 'loss' })
       return
     }
     if (state.banner.state === 'held') {

@@ -1,17 +1,44 @@
 import type { GameContext, System, WaveApi } from '../core/context'
 import type { SpawnEntry, Side } from '../core/types'
+import { mn } from '../i18n'
 
 /** Turns the data-driven wave table into timed spawns during the night. */
 export class WaveSystem implements System, WaveApi {
   constructor(private ctx: GameContext) {
     ctx.bus.on('phaseChanged', ({ phase, day }) => {
-      if (phase === 'Night') this.startNight(day)
-      else if (phase === 'Sunrise') this.reset()
+      // The raid is planned at dusk so the player can be warned which side it comes from.
+      if (phase === 'Sunset') {
+        this.planNight(day)
+        const { left, right } = this.incoming()
+        ctx.bus.emit('toast', {
+          text: mn.raidPreview(left, right),
+          kind: 'warning',
+        })
+      } else if (phase === 'Night') {
+        if (this.ctx.state.wave.night !== day) this.planNight(day)
+        this.ctx.state.wave.elapsed = 0
+      } else if (phase === 'Sunrise') this.reset()
     })
   }
 
   finishedSpawning(): boolean {
     return this.ctx.state.wave.queue.length === 0
+  }
+
+  incoming(): { left: number; right: number } {
+    const { state } = this.ctx
+    let left = 0
+    let right = 0
+    for (const e of state.wave.queue) {
+      if (e.side < 0) left++
+      else right++
+    }
+    for (const e of state.enemies) {
+      if (e.state === 'Dead') continue
+      if (e.side < 0) left++
+      else right++
+    }
+    return { left, right }
   }
 
   update(dt: number): void {
@@ -29,7 +56,7 @@ export class WaveSystem implements System, WaveApi {
     this.ctx.state.wave = { night: 0, elapsed: 0, queue: [], total: 0 }
   }
 
-  private startNight(night: number): void {
+  private planNight(night: number): void {
     const { config, rng, state } = this.ctx
     const tier = config.waves.nights.find(
       (t) => night >= t.from && night <= t.to,

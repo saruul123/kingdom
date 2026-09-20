@@ -29,6 +29,8 @@ export function createBuilding(
     state: complete ? 'Active' : 'Planned',
     buildPointId,
     occupants: [],
+    upgrading: false,
+    upgradeProgress: 0,
     hitFlash: 0,
   }
 }
@@ -88,6 +90,35 @@ export class BuildingSystem
         execute: () => this.orderBuild(point.id),
       })
     }
+    for (const b of state.buildings) {
+      if (!isBuildingStanding(b) || b.upgrading) continue
+      const up = this.nextUpgrade(b)
+      if (!up) continue
+      out.push({
+        id: `upgrade:${b.id}`,
+        x: b.x,
+        radius: 40,
+        label: mn.upgrade(up.label),
+        cost: up.cost,
+        enabled: true,
+        execute: () => this.orderUpgrade(b.id),
+      })
+    }
+  }
+
+  private nextUpgrade(b: Building) {
+    return this.ctx.config.buildings[b.type].upgrades.at(b.level - 1)
+  }
+
+  private orderUpgrade(id: number): void {
+    const { state, bus, sys } = this.ctx
+    const b = findById(state.buildings, id)
+    if (!b || !isBuildingStanding(b) || b.upgrading) return
+    const up = this.nextUpgrade(b)
+    if (!up || !sys.economy.trySpend(up.cost)) return
+    b.upgrading = true
+    b.upgradeProgress = 0
+    bus.emit('toast', { text: mn.upgradeOrdered, kind: 'info' })
   }
 
   private orderBuild(pointId: string): void {
@@ -132,16 +163,32 @@ export class BuildingSystem
     return this.ctx.config.buildings[b.type].width / 2
   }
 
+  /** Archer slots: the level's override if it has one, else the base capacity. */
+  archerCapacity(b: Building): number {
+    const def = this.ctx.config.buildings[b.type]
+    let capacity = def.archerCapacity
+    for (const up of def.upgrades.slice(0, b.level - 1)) {
+      capacity = up.archerCapacity ?? capacity
+    }
+    return capacity
+  }
+
+  extraRange(b: Building): number {
+    const def = this.ctx.config.buildings[b.type]
+    return def.upgrades
+      .slice(0, b.level - 1)
+      .reduce((sum, up) => sum + (up.rangeBonus ?? 0), 0)
+  }
+
   ger(): Building | undefined {
     return this.ctx.state.buildings.find((b) => b.type === 'ger')
   }
 
   claimTowerSlot(archer: Citizen, preferredSide: Side): Building | undefined {
-    const { state, config } = this.ctx
+    const { state } = this.ctx
     const free = state.buildings.filter(
       (b) =>
-        isBuildingStanding(b) &&
-        b.occupants.length < config.buildings[b.type].archerCapacity,
+        isBuildingStanding(b) && b.occupants.length < this.archerCapacity(b),
     )
     if (free.length === 0) return undefined
     const pool = free.filter((b) => b.side === preferredSide)
@@ -151,7 +198,7 @@ export class BuildingSystem
     const slot = tower.occupants.length
     tower.occupants.push(archer.id)
     archer.postBuildingId = tower.id
-    archer.postX = tower.x + (slot === 0 ? -6 : 6)
+    archer.postX = tower.x + ([-8, 8, 0][slot] ?? 0)
     archer.postSide = tower.side
     return tower
   }

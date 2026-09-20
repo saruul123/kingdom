@@ -35,6 +35,8 @@ const params = () =>
     ? new URLSearchParams()
     : new URLSearchParams(window.location.search)
 
+const MUTE_KEY = 'mdrl.muted'
+
 const btn =
   'cursor-pointer rounded-sm border-2 px-6 py-2.5 font-display text-base font-bold tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
 const btnPrimary = `${btn} border-amber-300 bg-amber-400 text-stone-900 hover:bg-amber-300`
@@ -49,6 +51,7 @@ export function GameShell() {
   const [screen, setScreen] = useState<Screen>('menu')
   const [paused, setPaused] = useState(false)
   const [muted, setMuted] = useState(false)
+  const mutedRef = useRef(false)
   const [hasSave, setHasSave] = useState(false)
   const [hasAutosave, setHasAutosave] = useState(false)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -95,7 +98,7 @@ export function GameShell() {
         persist: mode !== 'demo',
       })
       const audio = new AudioManager(game.bus)
-      audio.muted = mode === 'demo'
+      audio.muted = mode === 'demo' || mutedRef.current
       const debug = q.has('debug')
       const speed = debug && q.get('speed') ? Number(q.get('speed')) : 1
       const renderer = new Renderer(canvas, game, assets, { debug })
@@ -120,7 +123,19 @@ export function GameShell() {
 
       const exitSave = () => game.save.save('exit')
       const onHide = () => {
-        if (document.visibilityState === 'hidden') exitSave()
+        if (document.visibilityState !== 'hidden') return
+        exitSave()
+        // Don't let the world (and the night's raiders) run while the tab is in the background.
+        if (
+          mode !== 'demo' &&
+          game.state.status === 'playing' &&
+          !game.paused
+        ) {
+          input.releaseTouchControls()
+          input.releaseInteract()
+          game.paused = true
+          setPaused(true)
+        }
       }
       window.addEventListener('pagehide', exitSave)
       document.addEventListener('visibilitychange', onHide)
@@ -173,6 +188,16 @@ export function GameShell() {
   }, [])
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MUTE_KEY) === '1'
+      mutedRef.current = saved
+      setMuted(saved)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     void loadAssets()
       .then((a) => {
@@ -206,7 +231,13 @@ export function GameShell() {
     const rt = runtime.current
     if (!rt) return
     rt.audio.muted = !rt.audio.muted
+    mutedRef.current = rt.audio.muted
     setMuted(rt.audio.muted)
+    try {
+      localStorage.setItem(MUTE_KEY, rt.audio.muted ? '1' : '0')
+    } catch {
+      // storage unavailable: the choice just won't persist
+    }
   }
 
   const resume = () => {
@@ -300,8 +331,16 @@ export function GameShell() {
                   aria-label="Үйлдэл"
                   onPointerDown={(e) => {
                     e.preventDefault()
+                    e.currentTarget.setPointerCapture(e.pointerId)
                     runtime.current?.input.pressInteract()
                   }}
+                  onPointerUp={() => runtime.current?.input.releaseInteract()}
+                  onPointerCancel={() =>
+                    runtime.current?.input.releaseInteract()
+                  }
+                  onLostPointerCapture={() =>
+                    runtime.current?.input.releaseInteract()
+                  }
                 >
                   ✦
                 </button>

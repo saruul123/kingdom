@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GameManager } from '../GameManager'
 import type { InputSource } from '../input/Input'
+import { heroAnimationFrame } from '../render/sprites'
 
 function setup() {
   const input: InputSource = {
@@ -14,6 +15,16 @@ function setup() {
 }
 
 describe('mounted movement', () => {
+  it('holds one still frame when standing and steps through walk/run frames when moving', () => {
+    const still = heroAnimationFrame(0, 0)
+    expect(still.row).toBe(0)
+    // time or leftover stride must not animate a standing hero
+    expect(heroAnimationFrame(3.7, 0)).toEqual(still)
+    expect(heroAnimationFrame(1, 0.03)).toEqual(still)
+    expect(heroAnimationFrame(2.4, 0.5)).toEqual({ row: 1, column: 2 })
+    expect(heroAnimationFrame(3.1, 0.9)).toEqual({ row: 2, column: 3 })
+  })
+
   it('keeps facing in the actual direction of travel while reversing', () => {
     const { game, input } = setup()
     input.right = true

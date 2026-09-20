@@ -2,12 +2,12 @@ import type { GameManager } from '../GameManager'
 import { clamp, lerp } from '../core/math'
 import { findById, isBuildingStanding } from '../core/lookup'
 import type { Citizen, Enemy } from '../core/types'
-import { BANK, drawReflection, makeAtmosphere } from './atmosphere'
+import { drawBackdrop, makeAtmosphere } from './atmosphere'
 import type { Atmosphere } from './atmosphere'
 import { drawHud } from './hud'
-import { ellipse, hash, px } from './pixel'
+import { ellipse, px } from './pixel'
 import type { G } from './pixel'
-import { C, tri } from './palette'
+import { C } from './palette'
 import {
   drawAnimal,
   drawArrow,
@@ -16,8 +16,12 @@ import {
   drawBorderPost,
   drawBuildSite,
   drawCoin,
-  drawCutout,
   drawFlame,
+  drawGer,
+  drawGroundDisc,
+  drawRoleBadge,
+  PERSON_HEIGHT,
+  drawLevelPips,
   drawHero,
   drawOvoo,
   drawPerson,
@@ -30,7 +34,18 @@ import {
 import type { Assets, PersonKind } from './sprites'
 
 /** Ground line as a fraction of the (low-resolution) buffer height. */
-const GROUND_FRACTION = 0.7
+const GROUND_FRACTION = 0.74
+
+const OUTLINE_OFFSETS: [number, number][] = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+]
 
 export interface RendererOptions {
   debug?: boolean
@@ -61,7 +76,14 @@ export class Renderer {
   private out: G
   private scene = makeCanvas()
   private world = makeCanvas()
+  private silhouette = makeCanvas()
+  private final = makeCanvas()
   private camX: number
+  private heroLastX: number
+  private heroStride = 0
+  private strideFrame = 0
+  /** Hoof dust kicked up while galloping. */
+  private dust: { x: number; age: number; size: number }[] = []
   private t = 0
   private fps = 60
 
@@ -73,6 +95,7 @@ export class Renderer {
   ) {
     this.out = canvas.getContext('2d')!
     this.camX = game.state.hero.x
+    this.heroLastX = game.state.hero.x
   }
 
   draw(dt: number): void {
@@ -80,10 +103,11 @@ export class Renderer {
     const { state } = game
     const W = canvas.width
     const H = canvas.height
-    const ps = Math.max(2, Math.round(H / 440))
+    // Sprites are large and few, so keep the low-res buffer around 340px tall.
+    const ps = Math.max(2, Math.round(H / 340))
     const bw = Math.ceil(W / ps)
     const bh = Math.ceil(H / ps)
-    for (const c of [this.scene, this.world]) {
+    for (const c of [this.scene, this.world, this.silhouette, this.final]) {
       if (c.canvas.width !== bw || c.canvas.height !== bh) {
         c.canvas.width = bw
         c.canvas.height = bh
@@ -91,10 +115,19 @@ export class Renderer {
       c.g.imageSmoothingEnabled = false
     }
     const s = this.scene.g
-    const w = this.world.g
     const groundY = Math.round(bh * GROUND_FRACTION)
     this.t += dt
     this.fps = lerp(this.fps, 1 / Math.max(dt, 0.001), 0.05)
+    const travelled = Math.abs(state.hero.x - this.heroLastX)
+    this.heroLastX = state.hero.x
+    // Four frames per gait cycle, driven by ground covered rather than wall time.
+    this.heroStride += Math.min(travelled, 50) / 20
+    this.updateDust(
+      dt,
+      state.hero.x,
+      state.hero.facing,
+      Math.abs(state.hero.vx) / game.config.hero.sprintSpeed,
+    )
 
     // camera (buffer pixels == world units)
     const halfView = bw / 2
@@ -106,32 +139,32 @@ export class Renderer {
       game.config.world.maxX - halfView + 160,
     )
     const cx = Math.round(this.camX)
-
     const atm = this.atmosphere()
 
-    // --- background scene
+    // --- plain backdrop, then markers that sit under the sprites
     s.setTransform(1, 0, 0, 1, 0, 0)
-    this.drawBackdrop(s, bw, bh, cx, atm)
-    this.drawForegroundGround(s, bw, groundY, cx, atm)
+    drawBackdrop(s, bw, bh, groundY, cx, atm)
     s.setTransform(1, 0, 0, 1, Math.round(bw / 2 - cx), groundY)
     this.drawGameplayCues(s, cx - bw / 2, cx + bw / 2)
     s.setTransform(1, 0, 0, 1, 0, 0)
 
-    // --- sprites on a transparent layer so the night tint only touches them
+    // --- sprites on a transparent layer
+    const w = this.world.g
     w.setTransform(1, 0, 0, 1, 0, 0)
     w.clearRect(0, 0, bw, bh)
     w.setTransform(1, 0, 0, 1, Math.round(bw / 2 - cx), groundY)
     const lights: Light[] = []
     this.drawWorld(w, cx - bw / 2 - 90, cx + bw / 2 + 90, lights)
     w.setTransform(1, 0, 0, 1, 0, 0)
-    this.tint(w, bw, bh, atm)
-    s.drawImage(this.world.canvas, 0, 0)
 
-    // --- emissive pass: fire glow, flames, lake reflections
+    // --- dark 1px outline around everything, so shapes separate from the backdrop
+    this.compose(bw, bh, atm)
+    s.drawImage(this.final.canvas, 0, 0)
+
+    // --- emissive pass: fire glow and flames
     s.setTransform(1, 0, 0, 1, Math.round(bw / 2 - cx), groundY)
     this.drawEmissive(s, atm, lights)
     s.setTransform(1, 0, 0, 1, 0, 0)
-    this.drawReflections(s, atm, bw, bh, groundY, cx, lights)
 
     // --- present, then HUD at full resolution
     out.setTransform(1, 0, 0, 1, 0, 0)
@@ -149,83 +182,58 @@ export class Renderer {
     })
   }
 
-  private drawBackdrop(
-    g: G,
-    bw: number,
-    bh: number,
-    camX: number,
-    a: Atmosphere,
-  ): void {
-    const draw = (img: HTMLImageElement) => {
-      const scale = Math.max(bw / img.width, bh / img.height)
-      const dw = img.width * scale
-      const dh = img.height * scale
-      const parallax = clamp(camX * 0.035, -(dw - bw) / 2, (dw - bw) / 2)
-      // The painted grass edge is at ~70% of the image. Keep it under the
-      // entities' feet even when the viewport crops the panorama vertically.
-      g.drawImage(
-        img,
-        (bw - dw) / 2 - parallax,
-        bh * GROUND_FRACTION - dh * 0.7,
-        dw,
-        dh,
-      )
-    }
-    g.imageSmoothingEnabled = true
-    const nightAlpha = clamp(a.w.n + a.w.u * 0.85, 0, 1)
-    if (nightAlpha < 1) draw(this.assets.day)
-    if (nightAlpha > 0) {
-      g.globalAlpha = nightAlpha
-      draw(this.assets.night)
-    }
-    g.globalAlpha = 1
-    g.imageSmoothingEnabled = false
-  }
+  /** Outline + night/dusk grade, both applied only where sprites were drawn. */
+  private compose(bw: number, bh: number, a: Atmosphere): void {
+    const sil = this.silhouette.g
+    sil.globalCompositeOperation = 'source-over'
+    sil.clearRect(0, 0, bw, bh)
+    sil.drawImage(this.world.canvas, 0, 0)
+    sil.globalCompositeOperation = 'source-in'
+    sil.fillStyle = '#0c1020'
+    sil.fillRect(0, 0, bw, bh)
+    sil.globalCompositeOperation = 'source-over'
 
-  /** A world-locked near bank gives the playable plane its own value and motion. */
-  private drawForegroundGround(
-    g: G,
-    width: number,
-    groundY: number,
-    camX: number,
-    a: Atmosphere,
-  ): void {
-    const soil = tri(a.w, '#35452b', '#39382e', '#101d29')
-    const grass = tri(a.w, '#829b3f', '#95804c', '#40533b')
-    const highlight = tri(a.w, '#d4cc73', '#e5ac64', '#92926a')
-    const pebble = tri(a.w, '#c0b99a', '#ac91a0', '#677287')
-
-    g.save()
-    g.globalAlpha = 0.44
-    px(g, soil, 0, groundY + 2, width, BANK + 1)
-    g.globalAlpha = 0.76
-    px(g, grass, 0, groundY, width, 2)
-    g.globalAlpha = 0.55
-    px(g, highlight, 0, groundY - 1, width, 1)
-    g.globalAlpha = 1
-
-    const left = Math.floor(camX - width / 2)
-    const first = Math.floor(left / 13) * 13
-    for (let wx = first; wx < left + width + 13; wx += 13) {
-      const x = wx - left
-      const n = hash(wx * 0.17)
-      if (n > 0.36) {
-        const y = groundY + 3 + Math.floor(hash(wx * 0.47) * 22)
-        px(g, grass, x, y - 2, 1, 3)
-        if (n > 0.78) px(g, highlight, x + 1, y - 1, 1, 2)
-      }
-      if (n < 0.18) {
-        const y = groundY + 9 + Math.floor(hash(wx * 0.31) * 18)
-        px(g, soil, x, y + 1, 5, 2)
-        px(g, pebble, x + 1, y, 3, 1)
-      }
+    const f = this.final.g
+    f.clearRect(0, 0, bw, bh)
+    for (const [dx, dy] of OUTLINE_OFFSETS)
+      f.drawImage(this.silhouette.canvas, dx, dy)
+    f.drawImage(this.world.canvas, 0, 0)
+    f.globalCompositeOperation = 'source-atop'
+    if (a.w.n > 0.01) {
+      f.fillStyle = `rgba(16,24,84,${0.42 * a.w.n})`
+      f.fillRect(0, 0, bw, bh)
     }
-    g.restore()
+    if (a.w.u > 0.01) {
+      f.fillStyle = `rgba(255,110,60,${0.14 * a.w.u})`
+      f.fillRect(0, 0, bw, bh)
+    }
+    f.globalCompositeOperation = 'source-over'
   }
 
   /** Important world objects stay bright and legible at every time of day. */
   private drawGameplayCues(g: G, left: number, right: number): void {
     const { state, config } = this.game
+    // coloured discs under units: who is on whose side, at a glance
+    for (const c of state.citizens) {
+      if (c.state === 'Dead' || c.x < left - 30 || c.x > right + 30) continue
+      if (
+        c.postBuildingId !== null &&
+        (c.brain === 'FindEnemy' || c.brain === 'Attack')
+      )
+        continue
+      drawGroundDisc(
+        g,
+        c.x,
+        c.owner === 'neutral' ? '#f2f2f2' : '#4fd68a',
+        13,
+        c.owner === 'neutral' ? 0.4 : 0.5,
+      )
+    }
+    for (const e of state.enemies) {
+      if (e.state === 'Dead' || e.x < left - 30 || e.x > right + 30) continue
+      drawGroundDisc(g, e.x, '#ff4a3a', 13, 0.6)
+    }
+    drawGroundDisc(g, state.hero.x, '#ffd24a', 28, 0.4)
     for (const point of config.content.buildPoints) {
       if (point.x < left - 30 || point.x > right + 30) continue
       if (point.building !== 'wall' && point.building !== 'tower') continue
@@ -256,6 +264,43 @@ export class Renderer {
     }
   }
 
+  /** One puff per gait frame while moving fast, fading within half a second. */
+  private updateDust(
+    dt: number,
+    x: number,
+    facing: 1 | -1,
+    speed01: number,
+  ): void {
+    const frame = Math.floor(this.heroStride)
+    if (frame !== this.strideFrame && speed01 > 0.3) {
+      this.dust.push({
+        x: x - facing * 30,
+        age: 0,
+        size: speed01 > 0.7 ? 3 : 2,
+      })
+    }
+    this.strideFrame = frame
+    for (const d of this.dust) d.age += dt
+    this.dust = this.dust.filter((d) => d.age < 0.55)
+  }
+
+  private drawDust(g: G): void {
+    for (const d of this.dust) {
+      const k = d.age / 0.55
+      const size = Math.round(d.size + k * 5)
+      g.globalAlpha = 0.55 * (1 - k)
+      px(
+        g,
+        '#d9caa2',
+        Math.round(d.x - size / 2),
+        Math.round(-2 - k * 12 - size / 2),
+        size,
+        size,
+      )
+    }
+    g.globalAlpha = 1
+  }
+
   private atmosphere(): Atmosphere {
     const { game } = this
     const { state, config } = game
@@ -279,20 +324,6 @@ export class Renderer {
     )
   }
 
-  /** Night/dusk colour grade applied only where sprites were drawn. */
-  private tint(w: G, bw: number, bh: number, a: Atmosphere): void {
-    w.globalCompositeOperation = 'source-atop'
-    if (a.w.n > 0.01) {
-      w.fillStyle = `rgba(16,24,84,${0.5 * a.w.n})`
-      w.fillRect(0, 0, bw, bh)
-    }
-    if (a.w.u > 0.01) {
-      w.fillStyle = `rgba(255,110,60,${0.16 * a.w.u})`
-      w.fillRect(0, 0, bw, bh)
-    }
-    w.globalCompositeOperation = 'source-over'
-  }
-
   // ---------------------------------------------------------------- world
 
   private drawWorld(g: G, left: number, right: number, lights: Light[]): void {
@@ -308,20 +339,11 @@ export class Renderer {
     }
     for (const o of state.ovoos) if (vis(o.x)) drawOvoo(g, o.x, t)
 
+    const dark = game.time.daylight() < 0.55
     for (const c of state.camps) {
       if (!vis(c.x, 120)) continue
-      drawCutout(
-        g,
-        this.assets.ger,
-        c.x - 18,
-        0,
-        58,
-        43,
-        [155, 60, 1225, 910],
-        1,
-        true,
-      )
-      const fx = c.x + 40
+      drawGer(g, c.x - 18, 32, 17, 24, false, dark, t)
+      const fx = c.x + 44
       px(g, C.stoneDark, fx - 7, -3, 4, 3)
       px(g, C.stone, fx - 3, -4, 4, 4)
       px(g, C.stoneDark, fx + 2, -3, 4, 3)
@@ -347,45 +369,19 @@ export class Renderer {
       const progress = building ? Math.max(0.12, b.constructionProgress) : 1
       const dmg = b.state === 'Damaged' ? 1 - b.health / b.maxHealth : 0
       const hurt = b.hitFlash > 0
+      // top of the sprite, for bars and level pips above it
+      const topY = b.type === 'tower' ? def.height + 72 : def.height
       if (b.type === 'ger') {
-        if (hurt) g.globalAlpha = 0.55
-        drawCutout(
-          g,
-          this.assets.ger,
-          b.x,
-          0,
-          124,
-          94,
-          [155, 60, 1225, 910],
-          1,
-          true,
-        )
-        g.globalAlpha = 1
+        drawGer(g, b.x, 60, 30, 44, hurt, dark, t)
         lights.push({
           x: b.x,
-          y: -18,
-          r: 110,
-          colour: 'rgba(255,170,80,A)',
-          strength: 0.7,
+          y: -26,
+          r: 120,
+          colour: 'rgba(255,175,90,A)',
+          strength: 0.75,
         })
       } else if (b.type === 'wall') {
-        if (building || dmg > 0)
-          drawWall(g, b.x, def.height, progress, dmg, hurt)
-        else {
-          if (hurt) g.globalAlpha = 0.55
-          drawCutout(
-            g,
-            this.assets.wall,
-            b.x,
-            0,
-            22,
-            def.height,
-            [610, 110, 270, 820],
-            1,
-            true,
-          )
-          g.globalAlpha = 1
-        }
+        drawWall(g, b.x, def.height, progress, dmg, hurt, b.level)
         if (!building) {
           drawTorchPole(g, b.x, -def.height - 2)
           lights.push({
@@ -398,22 +394,7 @@ export class Renderer {
           })
         }
       } else {
-        if (building) drawTower(g, b.x, def.height, progress, hurt)
-        else {
-          if (hurt) g.globalAlpha = 0.55
-          drawCutout(
-            g,
-            this.assets.tower,
-            b.x,
-            0,
-            57,
-            130,
-            [135, 6, 750, 1480],
-            1,
-            true,
-          )
-          g.globalAlpha = 1
-        }
+        drawTower(g, b.x, def.height, progress, hurt, b.level)
         if (!building) {
           lights.push({
             x: b.x + 17,
@@ -425,45 +406,26 @@ export class Renderer {
           })
         }
       }
-      if (building)
+      if (b.level > 1) drawLevelPips(g, b.x, -topY - 20, b.level - 1)
+      if (b.upgrading)
+        drawBar(g, b.x, -topY - 10, b.upgradeProgress, '#6ab0ff', 24)
+      else if (building)
+        drawBar(g, b.x, -topY - 10, b.constructionProgress, '#f3c64a', 24)
+      else if (b.health < b.maxHealth)
         drawBar(
           g,
           b.x,
-          -def.height - 60 + (b.type === 'wall' ? 26 : 0),
-          b.constructionProgress,
-          '#f3c64a',
-        )
-      else if (b.health < b.maxHealth) {
-        const top =
-          b.type === 'tower'
-            ? def.height + 58
-            : b.type === 'ger'
-              ? def.height + 12
-              : def.height + 12
-        drawBar(
-          g,
-          b.x,
-          -top,
+          -topY - 10,
           b.health / b.maxHealth,
           b.health / b.maxHealth < 0.4 ? '#e5533d' : '#7ecb5a',
-          22,
+          24,
         )
-      }
     }
 
     for (const s of config.content.stands)
       if (vis(s.x)) drawStand(g, s.x, s.profession)
 
-    if (state.banner.state === 'ground')
-      drawCutout(
-        g,
-        this.assets.banner,
-        state.banner.x,
-        0,
-        46,
-        88,
-        [108, 6, 900, 1510],
-      )
+    if (state.banner.state === 'ground') drawBanner(g, state.banner.x, 0, t, 52)
 
     for (const a of state.animals) {
       if (!vis(a.x)) continue
@@ -492,15 +454,15 @@ export class Renderer {
       drawBanner(g, -20, -36, t, 60)
       g.restore()
     }
+    this.drawDust(g)
     drawHero(
       g,
       this.assets,
       h.x,
       0,
       h.facing,
-      t,
+      this.heroStride,
       Math.abs(h.vx) / config.hero.sprintSpeed,
-      h.sprinting,
     )
     g.restore()
 
@@ -548,31 +510,33 @@ export class Renderer {
       fade: dead ? clamp(c.deadTimer / 1.5, 0, 1) : undefined,
       carrying: c.carrying > 0 && !dead,
     })
+    // Workers on the ground carry a job badge; archers already stand out on towers.
+    if (!dead && y === 0 && (kind === 'archer' || kind === 'builder'))
+      drawRoleBadge(g, c.x, -PERSON_HEIGHT - 12, kind)
   }
 
   private enemy(g: G, e: Enemy): void {
     const { t } = this
     const dead = e.state === 'Dead'
-    g.save()
-    if (e.hitFlash > 0) g.globalAlpha = 0.55
-    if (dead) g.globalAlpha = clamp(e.deadTimer / 1.5, 0, 1)
-    const moving = e.state === 'Moving' || e.state === 'Fleeing'
-    const bob = moving ? Math.sin((t + e.id) * 15) * 1.5 : 0
-    drawCutout(
-      g,
-      this.assets.raider,
-      e.x,
-      bob,
-      99,
-      76,
-      [145, 15, 1250, 980],
-      e.facing === -1 ? 1 : -1,
-    )
-    g.restore()
+    drawPerson(g, e.x, 0, e.facing, {
+      kind: 'bandit',
+      t: t + e.id,
+      moving: e.state === 'Moving' || e.state === 'Fleeing',
+      hurt: e.hitFlash > 0,
+      dead,
+      fade: dead ? clamp(e.deadTimer / 1.5, 0, 1) : undefined,
+    })
     if (dead) return
-    if (e.carryingBanner) drawBanner(g, e.x - e.facing * 8, -8, t, 34)
+    if (e.carryingBanner) drawBanner(g, e.x - e.facing * 10, -10, t, 40)
     if (e.health < e.maxHealth)
-      drawBar(g, e.x, -82, e.health / e.maxHealth, '#e5533d', 20)
+      drawBar(
+        g,
+        e.x,
+        -PERSON_HEIGHT - 12,
+        e.health / e.maxHealth,
+        '#e5533d',
+        22,
+      )
   }
 
   // ------------------------------------------------------------- lighting
@@ -606,53 +570,5 @@ export class Renderer {
     for (const l of lights)
       if (l.flameY !== undefined)
         drawFlame(g, Math.round(l.x), l.flameY, this.t, 1)
-  }
-
-  private drawReflections(
-    s: G,
-    atm: Atmosphere,
-    bw: number,
-    bh: number,
-    groundY: number,
-    cx: number,
-    lights: Light[],
-  ): void {
-    const wTop = groundY + BANK + 4
-    const dark = clamp(1 - atm.daylight * 1.25, 0, 1)
-    if (dark > 0.05) {
-      for (const l of lights) {
-        const sx = Math.round(l.x - cx + bw / 2)
-        if (sx < -10 || sx > bw + 10) continue
-        drawReflection(
-          s,
-          sx,
-          wTop,
-          bh,
-          '#ffb45a',
-          dark * l.strength * 0.8,
-          this.t,
-        )
-      }
-    }
-    if (atm.sunF >= 0 && atm.sunF <= 1)
-      drawReflection(
-        s,
-        Math.round(bw * (0.08 + 0.84 * atm.sunF)),
-        wTop,
-        bh,
-        '#ffe9a0',
-        0.6,
-        this.t,
-      )
-    else if (atm.daylight < 0.6)
-      drawReflection(
-        s,
-        Math.round(bw * (0.15 + 0.7 * atm.moonF)),
-        wTop,
-        bh,
-        '#dfe6ff',
-        0.55,
-        this.t,
-      )
   }
 }

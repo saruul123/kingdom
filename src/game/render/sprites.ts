@@ -42,41 +42,48 @@ interface Look {
 
 const LOOK: Record<PersonKind, Look> = {
   neutral: {
-    deel: C.neutralDeel,
-    sash: '#6b5f50',
-    hat: '#7d6e5a',
-    brim: '#cfc4ae',
-    trim: '#c9b98a',
+    deel: '#f0eadc',
+    sash: '#7a6f60',
+    hat: '#8d7f68',
+    brim: '#e6dcc6',
+    trim: '#d8c99a',
   },
   citizen: {
-    deel: C.citizenDeel,
+    deel: '#5d86d6',
     sash: C.red,
     hat: '#2f4f8f',
     brim: C.fur,
     trim: C.gold,
   },
   archer: {
-    deel: C.archerDeel,
+    deel: '#1fa08c',
     sash: C.gold,
-    hat: '#1c5a52',
+    hat: '#146b5d',
     brim: C.fur,
     trim: C.gold,
   },
   builder: {
-    deel: C.builderDeel,
-    sash: '#3a2a1a',
-    hat: '#7a4a1a',
-    brim: '#d8c9a4',
-    trim: '#f0d08a',
+    deel: '#e08a2c',
+    sash: '#4a2f16',
+    hat: '#8a4e14',
+    brim: '#f0dcae',
+    trim: '#fbe3a0',
   },
   bandit: {
-    deel: C.bandit,
-    sash: C.banditRed,
+    deel: '#7a2c2c',
+    sash: '#1c1010',
     hat: C.iron,
     brim: C.ironDark,
     trim: C.banditRed,
   },
 }
+
+/** Roles that get a badge above the head so they read at a glance. */
+export const ROLE_COLOUR = { archer: '#1fa08c', builder: '#e08a2c' } as const
+
+/** People are drawn at 2x so they stay readable next to the mounted hero. */
+export const PERSON_SCALE = 2
+export const PERSON_HEIGHT = 24 * PERSON_SCALE
 
 export interface PersonOpts {
   kind: PersonKind
@@ -90,6 +97,10 @@ export interface PersonOpts {
   carrying?: boolean
 }
 
+/**
+ * A plain figure in a deel and pointed hat, built from a few big pixels.
+ * Origin = feet; the sprite is 23 units tall, drawn at PERSON_SCALE.
+ */
 export function drawPerson(
   g: G,
   x: number,
@@ -102,153 +113,189 @@ export function drawPerson(
   g.save()
   g.translate(Math.round(x), Math.round(y))
   if (o.fade !== undefined) g.globalAlpha = o.fade
-  px(g, 'rgba(0,0,0,0.28)', -6, -1, 13, 2)
   if (o.dead) g.rotate((facing * Math.PI) / 2)
+  g.scale(PERSON_SCALE, PERSON_SCALE)
   const r = mk(g, facing)
 
   const f = o.moving && !o.dead ? Math.floor(o.t * 9) % 4 : 0
-  const stride = [0, 2, 0, -2][f]
+  const stride = [0, 1, 0, -1][f]
   const by = o.moving && f % 2 === 1 ? -1 : 0
 
-  // legs and boots
+  r('rgba(0,0,0,0.3)', -5, -1, 11, 1)
   const legs = '#3a2c22'
-  r(legs, -2 + stride, -7, 2, 5)
-  r(legs, 1 - stride, -7, 2, 5)
-  r('#1f1712', -3 + stride, -3, 3, 3)
-  r('#1f1712', 1 - stride, -3, 3, 3)
+  r(legs, -2 + stride, -5, 2, 4)
+  r(legs, 1 - stride, -5, 2, 4)
+  r('#1f1712', -2 + stride, -1, 2, 1)
+  r('#1f1712', 1 - stride, -1, 2, 1)
 
-  // spear (behind the body) for bandits
   if (o.kind === 'bandit') {
-    r('#6b4a2b', 6, -33 + by, 1, 30)
-    r(c(C.iron), 5, -37 + by, 3, 4)
-    r(c('#e6eaf2'), 6, -38 + by, 1, 1)
+    r('#6b4a2b', 5, -27 + by, 1, 22)
+    r(c('#dfe5f0'), 4, -30 + by, 3, 3)
   }
 
-  // deel: long robe, wider at the hem
   const body = c(look.deel)
-  const hi = c(light(look.deel, 0.2))
-  const lo = c(shade(look.deel, 0.28))
-  r(body, -3, -20 + by, 7, 6)
-  r(body, -4, -14 + by, 8, 6)
-  r(body, -4, -8 + by, 9, 2)
-  r(hi, -3, -20 + by, 1, 12)
-  r(lo, 3, -20 + by, 1, 12)
-  r(lo, 4, -8 + by, 1, 2)
-  r(c(look.sash), -4, -14 + by, 8, 2)
-  r(c(C.gold), 2, -14 + by, 2, 3)
-  r(c(look.trim), -2, -20 + by, 5, 1)
+  r(body, -3, -13 + by, 7, 5)
+  r(body, -4, -8 + by, 9, 4)
+  r(c(light(look.deel, 0.2)), -3, -13 + by, 1, 9)
+  r(c(shade(look.deel, 0.3)), 3, -13 + by, 1, 9)
+  r(c(look.sash), -3, -9 + by, 7, 1)
+  r(c(look.trim), -2, -13 + by, 5, 1)
 
-  // head
-  r(c(C.skin), -2, -25 + by, 5, 5)
-  r(c(C.skinDark), -2, -21 + by, 5, 1)
-  r('#2a1a12', 2, -23 + by, 1, 1)
+  r(c(C.skin), -2, -17 + by, 5, 4)
+  r('#2a1a12', 1, -16 + by, 1, 1)
   if (o.kind === 'bandit') {
-    r(c(C.banditRed), -2, -22 + by, 5, 2)
-    r(c(C.iron), -3, -26 + by, 7, 2)
-    r(c(light(C.iron, 0.2)), -2, -28 + by, 5, 2)
-    r(c(C.ironDark), -1, -30 + by, 3, 2)
-    r(c(C.iron), 0, -32 + by, 1, 2)
-    r(c(C.banditRed), -4, -28 + by, 2, 3)
+    r(c(C.banditRed), -2, -15 + by, 5, 2)
+    r(c(C.iron), -3, -18 + by, 7, 2)
+    r(c(light(C.iron, 0.2)), -2, -20 + by, 5, 2)
+    r(c(C.ironDark), -1, -22 + by, 3, 2)
+    r(c(C.banditRed), -4, -20 + by, 1, 3)
   } else {
-    r(c(look.brim), -3, -26 + by, 7, 2)
-    r(c(look.hat), -2, -28 + by, 5, 2)
-    r(c(look.hat), -1, -30 + by, 3, 2)
-    r(C.gold, 0, -31 + by, 1, 1)
+    r(c(look.brim), -3, -18 + by, 7, 2)
+    r(c(look.hat), -2, -20 + by, 5, 2)
+    r(c(look.hat), -1, -22 + by, 3, 2)
+    r(C.gold, 0, -23 + by, 1, 1)
   }
 
-  // arm
-  r(body, 2, -19 + by, 2, 5)
-  r(c(C.skin), 2, -14 + by, 2, 2)
+  r(body, 2, -12 + by, 2, 5)
+  r(c(C.skin), 2, -7 + by, 2, 1)
 
   if (o.kind === 'archer') {
     const bow: [number, number][] = [
-      [6, -25],
-      [7, -24],
-      [8, -23],
-      [8, -22],
-      [8, -21],
-      [8, -20],
-      [8, -19],
-      [8, -18],
-      [8, -17],
-      [8, -16],
-      [8, -15],
-      [8, -14],
-      [7, -13],
-      [6, -12],
+      [4, -17],
+      [5, -16],
+      [5, -15],
+      [5, -14],
+      [5, -13],
+      [5, -12],
+      [5, -11],
+      [5, -10],
+      [4, -9],
     ]
-    for (const [bx, bY] of bow) r(C.woodLight, bx, bY + by, 1, 1)
-    r('#e8e8e8', 6, -24 + by, 1, 12)
+    for (const [bx, bY] of bow) r('#c98a3c', bx, bY + by, 1, 1)
+    r('#f0f0f0', 4, -16 + by, 1, 7)
     if (o.action === 'shoot') {
-      r('#d9d2c0', 2, -18 + by, 9, 1)
-      r('#ffffff', 11, -18 + by, 1, 1)
+      r('#e8dfc8', 1, -13 + by, 8, 1)
+      r('#ffffff', 9, -13 + by, 1, 1)
     }
   } else if (o.kind === 'builder') {
     const swing = o.action === 'hammer' && Math.floor(o.t * 5) % 2 === 0
     if (swing) {
-      r(C.woodDark, 5, -25 + by, 1, 12)
-      r(C.iron, 3, -28 + by, 5, 3)
+      r(C.woodDark, 4, -17 + by, 1, 9)
+      r('#9aa0ac', 2, -19 + by, 5, 2)
     } else {
-      r(C.woodDark, 4, -14 + by, 6, 1)
-      r(C.iron, 9, -17 + by, 3, 4)
+      r(C.woodDark, 3, -8 + by, 5, 1)
+      r('#9aa0ac', 7, -10 + by, 2, 3)
     }
   }
-  if (o.carrying) r(C.gold, 4, -13 + by, 2, 2)
+  if (o.carrying) r(C.gold, 4, -8 + by, 2, 2)
   g.restore()
+}
+
+/** Coloured disc under a unit: allies green, raiders red, neutrals white, the hero gold. */
+export function drawGroundDisc(
+  g: G,
+  x: number,
+  colour: string,
+  rx: number,
+  alpha = 0.55,
+): void {
+  g.globalAlpha = alpha
+  ellipse(g, colour, Math.round(x), 1, rx, 4)
+  g.globalAlpha = 0.9
+  ellipse(g, colour, Math.round(x), 1, Math.max(2, rx - 2), 2)
+  g.globalAlpha = 1
+}
+
+const BOW_ICON = [
+  '.yy....',
+  'y..y...',
+  'y..y.y.',
+  'yyyyyyy',
+  'y..y.y.',
+  'y..y...',
+  '.yy....',
+]
+const HAMMER_ICON = [
+  'yyyyy..',
+  'yyyyyy.',
+  'yyyyy..',
+  '..yy...',
+  '..yy...',
+  '..yy...',
+  '..yy...',
+]
+
+/** Round badge above a worker's head showing their job. */
+export function drawRoleBadge(
+  g: G,
+  x: number,
+  y: number,
+  role: 'archer' | 'builder',
+): void {
+  const cx = Math.round(x)
+  disc(g, ROLE_COLOUR[role], cx, y, 8)
+  disc(g, '#101828', cx, y, 6)
+  bitmap(
+    g,
+    role === 'archer' ? BOW_ICON : HAMMER_ICON,
+    { y: '#ffffff' },
+    cx - 3,
+    y - 3,
+    1,
+  )
 }
 
 // -------------------------------------------------------------------- hero
 
 export interface Assets {
-  day: HTMLImageElement
-  night: HTMLImageElement
   hero: HTMLImageElement
-  raider: HTMLImageElement
-  ger: HTMLImageElement
-  tower: HTMLImageElement
-  wall: HTMLImageElement
-  banner: HTMLImageElement
 }
 
-/** Draw an isolated sprite with its feet aligned to the world's ground line. */
-export function drawCutout(
-  g: G,
-  img: HTMLImageElement,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  crop: readonly [number, number, number, number],
-  facing: 1 | -1 = 1,
-  emphasize = false,
-): void {
-  g.save()
-  g.translate(Math.round(x), Math.round(y))
-  g.scale(facing, 1)
-  if (emphasize) {
-    g.shadowColor = 'rgba(5,13,24,0.95)'
-    g.shadowBlur = 5
-    g.shadowOffsetY = 2
-  }
-  g.drawImage(img, ...crop, -width / 2, -height, width, height)
-  g.restore()
+const HERO_CELL_W = 88
+const HERO_CELL_H = 92
+
+/** Idle row column with the legs most nearly planted; the other idle frames are trot poses. */
+const HERO_STANDING_FRAME = 2
+
+/**
+ * Atlas rows: idle, walk, run, attack. Walk/run advance with distance travelled;
+ * standing still holds one frame instead of cycling (the idle row looks like walking).
+ */
+export function heroAnimationFrame(
+  stride: number,
+  speed01: number,
+): { row: number; column: number } {
+  if (speed01 <= 0.06) return { row: 0, column: HERO_STANDING_FRAME }
+  return { row: speed01 > 0.7 ? 2 : 1, column: Math.floor(stride) % 4 }
 }
 
-/** Keep the single-frame mount grounded, with a restrained distance-based gait. */
+/** Draw one foot-aligned frame of the animated mounted hero. */
 export function drawHero(
   g: G,
   assets: Assets,
   x: number,
   y: number,
   facing: 1 | -1,
-  _t: number,
+  stride: number,
   speed01: number,
-  sprinting: boolean,
 ): void {
-  const gait = Math.min(1, speed01 * (sprinting ? 1.15 : 1.65))
-  const bob = gait > 0.08 ? Math.max(0, Math.sin(x * 0.12)) * gait * 1.25 : 0
+  const { row, column } = heroAnimationFrame(stride, speed01)
   ellipse(g, 'rgba(15,20,12,0.34)', x, y - 1, 30, 3)
-  drawCutout(g, assets.hero, x, y - bob, 108, 78, [90, 48, 1290, 910], facing)
+  g.save()
+  g.translate(Math.round(x), Math.round(y))
+  g.scale(facing, 1)
+  g.drawImage(
+    assets.hero,
+    column * HERO_CELL_W,
+    row * HERO_CELL_H,
+    HERO_CELL_W,
+    HERO_CELL_H,
+    -50,
+    -104,
+    100,
+    104,
+  )
+  g.restore()
 }
 
 // ------------------------------------------------------------------ banner
@@ -398,6 +445,7 @@ export function drawWall(
   progress: number,
   damage: number,
   hurt: boolean,
+  level = 1,
 ): void {
   const c = (col: string) => (hurt ? tint(col, HURT, 0.5) : col)
   g.save()
@@ -423,6 +471,12 @@ export function drawWall(
     px(g, c(C.iron), -9, -Math.round(ph * 0.68), 2, 2)
     px(g, c(C.iron), 7, -Math.round(ph * 0.68), 2, 2)
   }
+  if (level > 1 && ph > 14) {
+    // upgraded: iron-banded and capped
+    px(g, c('#b8c0d0'), -9, -Math.round(ph * 0.48), 18, 2)
+    px(g, c('#b8c0d0'), -9, -Math.round(ph * 0.12), 18, 2)
+    for (let i = 0; i < 4; i++) px(g, c('#e6ebf5'), -8 + i * 4, -ph - 1, 2, 2)
+  }
   if (progress < 1) {
     px(g, C.woodLight, -11, -ph - 6, 1, ph + 6)
     px(g, C.woodLight, 10, -ph - 6, 1, ph + 6)
@@ -437,6 +491,7 @@ export function drawTower(
   h: number,
   progress: number,
   hurt: boolean,
+  level = 1,
 ): void {
   const c = (col: string) => (hurt ? tint(col, HURT, 0.5) : col)
   g.save()
@@ -465,22 +520,31 @@ export function drawTower(
     for (let dx = -15; dx <= 13; dx += 4)
       px(g, c(dx % 8 ? C.wood : C.woodLight), dx, -ph - 9, 3, 9)
     px(g, c(C.woodDark), -16, -ph - 10, 32, 2)
-    px(g, c(C.woodDark), -16, -ph - 30, 2, 22)
-    px(g, c(C.woodDark), 14, -ph - 30, 2, 22)
+    // open cabin tall enough for archers to stand in
+    px(g, c(C.woodDark), -16, -ph - 52, 2, 44)
+    px(g, c(C.woodDark), 14, -ph - 52, 2, 44)
     const rows = 14
     for (let dy = 0; dy < rows; dy++) {
       const half = Math.round(24 * (1 - dy / (rows + 2)))
       px(
         g,
-        c(dy % 2 ? '#6b2a20' : '#8a3a2a'),
+        c(
+          level > 1
+            ? dy % 2
+              ? '#1c3f8a'
+              : '#2f5cc0'
+            : dy % 2
+              ? '#6b2a20'
+              : '#8a3a2a',
+        ),
         -half,
-        -ph - 30 - dy,
+        -ph - 52 - dy,
         half * 2 + 1,
         1,
       )
     }
-    px(g, c(C.gold), 0, -ph - 48, 1, 5)
-    px(g, c(C.goldDark), -1, -ph - 44, 3, 1)
+    px(g, c(C.gold), 0, -ph - 70, 1, 5)
+    px(g, c(C.goldDark), -1, -ph - 66, 3, 1)
   }
   g.restore()
 }
@@ -511,6 +575,17 @@ export function drawFlame(
   )
   px(g, C.fireC, x, y - h + 4, 1, Math.max(1, h - 6))
   px(g, C.fireA, x + (f - 1), y - h - 1, 1, 2)
+}
+
+/** Small gold diamonds above a building, one per upgrade level. */
+export function drawLevelPips(g: G, x: number, y: number, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const px0 = Math.round(x + (i - (n - 1) / 2) * 8)
+    px(g, '#7a5410', px0 - 1, y - 3, 3, 7)
+    px(g, '#7a5410', px0 - 3, y - 1, 7, 3)
+    px(g, '#ffd24a', px0, y - 2, 1, 5)
+    px(g, '#ffd24a', px0 - 2, y, 5, 1)
+  }
 }
 
 export function drawOvoo(g: G, x: number, t: number): void {

@@ -41,8 +41,8 @@ function builderCount(
 const ratio = (b: Building) => b.health / b.maxHealth
 
 /**
- * Task priority: repair critical defenses → finish construction → repair anything else.
- * (Upgrades are not part of the MVP.)
+ * Task priority: repair critical defenses → finish construction → upgrade
+ * buildings → repair anything else.
  */
 function pickTask(u: Citizen, ctx: GameContext): Building | undefined {
   const buildings = ctx.state.buildings
@@ -71,6 +71,17 @@ function pickTask(u: Citizen, ctx: GameContext): Building | undefined {
     )
     .sort(byDistance)
   if (construction[0]) return construction[0]
+
+  const upgrades = buildings
+    .filter(
+      (b) =>
+        isBuildingStanding(b) &&
+        b.upgrading &&
+        builderCount(ctx, b.id, u.id) < def(ctx).maxPerTask &&
+        safe(b),
+    )
+    .sort(byDistance)
+  if (upgrades[0]) return upgrades[0]
 
   const damaged = buildings
     .filter((b) => isBuildingStanding(b) && b.health < b.maxHealth && safe(b))
@@ -111,7 +122,11 @@ export const builderNodes: Nodes<Citizen> = {
     if (!moveToward(ctx, u, workSpot(ctx, b), def(ctx).speed, dt, 4)) return
     const constructing =
       b.state === 'Planned' || b.state === 'UnderConstruction'
-    go(u, constructing ? 'Build' : 'Repair', 'Working')
+    go(
+      u,
+      constructing ? 'Build' : b.upgrading ? 'Upgrade' : 'Repair',
+      'Working',
+    )
   },
 
   Build(u, ctx, dt) {
@@ -122,6 +137,15 @@ export const builderNodes: Nodes<Citizen> = {
     ctx.sys.construction.work(b, dt * def(ctx).buildRate)
     // 'Complete': once the building is up, look for the next task.
     if (b.state !== 'UnderConstruction') go(u, 'Idle', 'Idle')
+  },
+
+  Upgrade(u, ctx, dt) {
+    const b = findById(ctx.state.buildings, u.target?.id)
+    if (!b || !isBuildingStanding(b) || !b.upgrading)
+      return go(u, 'Idle', 'Idle')
+    if (nearestEnemyDistance(ctx, u.x) <= DANGER_RANGE)
+      return go(u, 'Idle', 'Idle')
+    ctx.sys.construction.upgrade(b, dt * def(ctx).buildRate)
   },
 
   Repair(u, ctx, dt) {

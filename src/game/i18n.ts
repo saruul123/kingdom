@@ -17,6 +17,14 @@ export const mn = {
   nightN: (n: number) => `Шөнө ${n}`,
   sunSetting: 'Нар жаргаж байна...',
   nightSurvived: 'Та шөнийг даван туулав.',
+  nightReport: (kills: number, lost: number) =>
+    lost > 0
+      ? `Шөнө дууслаа: ${kills} дайсан устгав, ${lost} иргэн амиа алдав.`
+      : `Шөнө дууслаа: ${kills} дайсан устгав, хэн ч амиа алдсангүй.`,
+  raidPreview: (left: number, right: number) =>
+    `Шөнө дайсан ирнэ: зүүнээс ${left}, баруунаас ${right}.`,
+  raidersSides: (left: number, right: number) => `←${left}  ${right}→`,
+  meters: 'м',
 
   coins: (n: number) => `${n} зоос`,
   raiders: (n: number) => `Дайсан ${n}`,
@@ -24,6 +32,9 @@ export const mn = {
   bannerDropped: 'ТУГ УНАВ!',
 
   recruit: 'Элсүүлэх',
+  upgrade: (what: string) => `Шинэчлэх: ${what}`,
+  upgradeDone: (what: string) => `${what} бэлэн боллоо.`,
+  upgradeOrdered: 'Барилгачид шинэчлэлтийг эхэллээ.',
   build: (what: string) => `${what} барих`,
   makeProfession: (stand: string, profession: string) =>
     `${stand}: ${profession} болгох`,
@@ -41,6 +52,22 @@ export const mn = {
   reasonBannerLost: 'Туг таны нутгаас гадагш авагдлаа.',
   reasonGerFell: 'Төв гэр нурлаа.',
 
+  objective: {
+    label: 'Зорилго',
+    coins: 'Зоос цуглуул: алтан овоолго руу давхи',
+    recruit: 'Иргэн элсүүл: буудлын иргэнд ойртоод E дар',
+    moreCitizens: 'Илүү иргэн элсүүл: тэд таны хүч',
+    archer: 'Нумын тавиур дээр иргэнийг Харваач болго',
+    builder: 'Алхны тавиур дээр иргэнийг Барилгачин болго',
+    build: 'Гэрийн хажууд хашаа, цамхаг бариул',
+    tower: 'Цамхаг бариул: харваачид дээрээс буудна',
+    upgrade: 'Хашаа, цамхгаа шинэчилж бэхжүүл',
+    sunset: 'Шөнө болох гэж байна: хамгаалалтаа бэлд',
+    night: 'Шөнийг даван туул: гэр болон тугаа хамгаал',
+  },
+  population: {
+    citizens: 'Иргэн',
+  },
   controlsHint:
     'A D / ← →  давхих     Shift  хурдлах     E / ↓ / Зай  үйлдэл     P  зогсоох',
   controlsShort: {
